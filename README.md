@@ -10,6 +10,10 @@
 
 <h3>A Postgres MCP server with index tuning, explain plans, health checks, and safe sql execution.</h3>
 
+<p align="center">
+<strong>Extended version based on <a href="https://github.com/crystaldba/postgres-mcp">crystaldba/postgres-mcp</a></strong>
+</p>
+
 <div class="toc">
   <a href="#overview">Overview</a> •
   <a href="#demo">Demo</a> •

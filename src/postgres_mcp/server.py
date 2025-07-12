@@ -22,6 +22,7 @@ from .artifacts import ErrorResult
 from .artifacts import ExplainPlanArtifact
 from .database_health import DatabaseHealthTool
 from .database_health import HealthType
+from .database_overview import DatabaseOverviewTool
 from .explain import ExplainPlanTool
 from .index.index_opt_base import MAX_NUM_INDEX_TUNING_QUERIES
 from .index.llm_opt import LLMOptimizerTool
@@ -506,6 +507,23 @@ async def get_top_queries(
         return format_text_response(result)
     except Exception as e:
         logger.error(f"Error getting slow queries: {e}")
+        return format_error_response(str(e))
+
+
+@mcp.tool(description="Get comprehensive database overview with performance and security analysis")
+async def get_database_overview(
+    max_tables: int = Field(description="Maximum number of tables to analyze per schema", default=500),
+    sampling_mode: bool = Field(description="Use statistical sampling for large datasets", default=True),
+    timeout: int = Field(description="Maximum execution time in seconds", default=300),
+) -> ResponseType:
+    """Get comprehensive database overview including schemas, tables, relationships, performance metrics, and security analysis."""
+    try:
+        sql_driver = await get_sql_driver()
+        overview_tool = DatabaseOverviewTool(sql_driver)
+        result = await overview_tool.get_database_overview(max_tables, sampling_mode, timeout)
+        return format_text_response(result)
+    except Exception as e:
+        logger.error(f"Error getting database overview: {e}")
         return format_error_response(str(e))
 
 
