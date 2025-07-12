@@ -90,6 +90,15 @@ The server will start in unrestricted mode by default. For read-only access, use
 ./start.sh --access-mode restricted
 ```
 
+## Development & Enhancement
+
+For detailed analysis of all available tools and potential improvements, see [Tool Analysis & Improvement Recommendations](todos/tool_improvements.md). This document provides:
+
+- Comprehensive analysis of each tool's current functionality
+- Technical implementation details and dependencies
+- Specific improvement recommendations with implementation guidance
+- Priority-based enhancement roadmap
+
 ## License
 
 MIT License
