@@ -17,12 +17,14 @@
 | `analyze_workload_indexes` | Analyze frequently executed queries and recommend optimal indexes using DTA or LLM methods |
 | `analyze_query_indexes` | Analyze a list of specific SQL queries (up to 10) and recommend optimal indexes |
 | `analyze_db_health` | Perform comprehensive health checks including buffer cache, connections, vacuum, sequences, replication, and constraints |
+| `get_blocking_queries` | Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations |
 
 ## Extended Tools
 
 | Tool Name | Description |
 |-----------|-------------|
 | `get_database_overview` | Get comprehensive database overview with performance and security analysis |
+| `get_blocking_queries` | Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations |
 
 ### Database Overview Tool Details
 
@@ -38,6 +40,36 @@ The `get_database_overview` tool provides a comprehensive analysis of your Postg
 - `max_tables` (default: 500): Maximum number of tables to analyze per schema
 - `sampling_mode` (default: true): Use statistical sampling for large datasets
 - `timeout` (default: 300): Maximum execution time in seconds
+
+### Blocking Queries Analysis Tool
+
+The `get_blocking_queries` tool provides comprehensive analysis of PostgreSQL blocking queries and lock contention with enterprise-grade features:
+
+**Features:**
+- **Modern Analysis**: Uses PostgreSQL's `pg_blocking_pids()` function for accurate blocking detection
+- **Lock Hierarchy**: Shows complete blocking chains and relationships between processes
+- **Comprehensive Metrics**: Process details, wait events, timing information, and lock types
+- **Intelligent Recommendations**: Severity-based recommendations with specific optimization suggestions
+- **Database Engineer Focus**: Designed for production database monitoring and performance troubleshooting
+
+**Analysis Output:**
+- Blocked and blocking process information (PID, user, application, client address)
+- Query text and execution timing
+- Lock types, modes, and affected database relations
+- Wait events and state information
+- Summary statistics and trend analysis
+- Categorized recommendations (🚨 Critical, ⚠️ Warning, 💡 Optimization, 🎯 Hotspot)
+
+**PostgreSQL Version Compatibility:**
+- **Minimum Required**: PostgreSQL 9.6+ (for `pg_blocking_pids()` function)
+- **Recommended**: PostgreSQL 12+ (for enhanced lock monitoring features)
+- **Optimal**: PostgreSQL 14+ (includes `pg_locks.waitstart` for precise wait timing)
+
+**Key Advantages:**
+- More reliable than manual `pg_locks` table joins
+- Handles complex lock hierarchies and parallel worker relationships
+- Provides actionable insights for database performance optimization
+- Enterprise-ready with comprehensive error handling and structured output
 
 ## Basic Usage
 

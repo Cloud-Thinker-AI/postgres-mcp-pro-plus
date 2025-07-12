@@ -20,6 +20,7 @@ from postgres_mcp.index.dta_calc import DatabaseTuningAdvisor
 
 from .artifacts import ErrorResult
 from .artifacts import ExplainPlanArtifact
+from .blocking_queries import BlockingQueriesAnalyzer
 from .database_health import DatabaseHealthTool
 from .database_health import HealthType
 from .database_overview import DatabaseOverviewTool
@@ -524,6 +525,19 @@ async def get_database_overview(
         return format_text_response(result)
     except Exception as e:
         logger.error(f"Error getting database overview: {e}")
+        return format_error_response(str(e))
+
+
+@mcp.tool(description="Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations")
+async def get_blocking_queries() -> ResponseType:
+    """Get comprehensive information about blocking queries and locks in the database with analysis and recommendations."""
+    try:
+        sql_driver = await get_sql_driver()
+        analyzer = BlockingQueriesAnalyzer(sql_driver)
+        result = await analyzer.get_blocking_queries()
+        return format_text_response(result)
+    except Exception as e:
+        logger.error(f"Error getting blocking queries: {e}")
         return format_error_response(str(e))
 
 
