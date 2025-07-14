@@ -1,0 +1,8 @@
+services:
+  mcp-server:
+    build: .
+    container_name: postgres-mcp
+    env_file:
+      - .env
+    networks:
+      - default
