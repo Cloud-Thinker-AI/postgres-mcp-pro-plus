@@ -2,6 +2,8 @@ services:
   postgres-mcp:
     build: .
     container_name: postgres-mcp
+    ports:
+      - "8099:8099"
     env_file:
       - .env
     networks:
