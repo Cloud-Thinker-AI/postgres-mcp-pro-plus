@@ -48,7 +48,8 @@ RUN apt-get update && apt-get install -y \
   && rm -rf /var/lib/apt/lists/*
 
 COPY docker-entrypoint.sh /app/
-RUN chmod +x /app/docker-entrypoint.sh
+COPY start.sh /app/
+RUN chmod +x /app/docker-entrypoint.sh /app/start.sh
 
 # Expose the SSE port
 EXPOSE 8000

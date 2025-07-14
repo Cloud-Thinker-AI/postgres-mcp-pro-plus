@@ -93,8 +93,8 @@ echo "Executing command:" >&2
 echo "${processed_args[@]}" >&2
 echo "----------------" >&2
 
-# Execute the command with the processed arguments
-"${processed_args[@]}"
+# Execute start.sh instead of the processed arguments
+/app/start.sh
 
 # Capture exit code from the Python process
 exit_code=$?

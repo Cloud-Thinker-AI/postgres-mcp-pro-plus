@@ -1,7 +1,9 @@
 #!/bin/bash
 
-# Load environment variables
-source .env
+# Load environment variables if .env exists
+if [ -f .env ]; then
+    source .env
+fi
 
-# Start the server
-uv run postgres-mcp $DATABASE_URL --transport sse --sse-port 8099
+# Start the server using the postgres-mcp command
+postgres-mcp ${DATABASE_URI:-$DATABASE_URL} --transport sse --sse-port 8099

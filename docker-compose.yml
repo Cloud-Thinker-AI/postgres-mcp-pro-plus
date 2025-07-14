@@ -1,0 +1,12 @@
+services:
+  postgres-mcp:
+    build: .
+    container_name: postgres-mcp
+    env_file:
+      - .env
+    networks:
+      - cloud-cost-optimization_default
+
+networks:
+  cloud-cost-optimization_default:
+    external: true
