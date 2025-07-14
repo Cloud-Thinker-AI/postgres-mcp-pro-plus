@@ -6,4 +6,4 @@ if [ -f .env ]; then
 fi
 
 # Start the server using the postgres-mcp command
-postgres-mcp ${DATABASE_URI:-$DATABASE_URL} --transport sse --sse-port 8099
+postgres-mcp ${DATABASE_URI:-$DATABASE_URL} --transport sse --sse-port 8099 --sse-host 0.0.0.0

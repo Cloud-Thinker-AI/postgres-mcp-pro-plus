@@ -52,7 +52,7 @@ COPY start.sh /app/
 RUN chmod +x /app/docker-entrypoint.sh /app/start.sh
 
 # Expose the SSE port
-EXPOSE 8000
+EXPOSE 8099
 
 # Run the postgres-mcp server
 # Users can pass a database URI or individual connection arguments:
