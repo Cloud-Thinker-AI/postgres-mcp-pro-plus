@@ -98,7 +98,7 @@ class VacuumAnalysisTool:
                 "tables_with_dead_tuples": data["tables_with_dead_tuples"],
                 "total_dead_tuples": data["total_dead_tuples"],
                 "total_live_tuples": data["total_live_tuples"],
-                "avg_dead_tuple_percentage": round(data["avg_dead_tuple_percentage"] or 0, 2),
+                "avg_dead_tuple_percentage": round(data["avg_dead_tuple_percentage"] or 0.0, 2),
                 "tables_not_vacuumed_24h": data["tables_not_vacuumed_24h"],
             }
 
@@ -158,7 +158,7 @@ class VacuumAnalysisTool:
                 bloat_tables.append(
                     {
                         "qualified_name": f"{data['schemaname']}.{data['relname']}",
-                        "dead_percentage": round(data["dead_percentage"], 2),
+                        "dead_percentage": round(data["dead_percentage"] or 0.0, 2),
                         "dead_tuples": data["n_dead_tup"],
                         "live_tuples": data["n_live_tup"],
                         "total_size_mb": round(data["total_size_bytes"] / (1024 * 1024), 2),
@@ -234,11 +234,11 @@ class VacuumAnalysisTool:
                         "qualified_name": f"{data['schemaname']}.{data['relname']}",
                         "dead_tuples": data["n_dead_tup"],
                         "live_tuples": data["n_live_tup"],
-                        "calculated_threshold": round(data["calculated_threshold"], 0),
+                        "calculated_threshold": round(data["calculated_threshold"] or 0.0, 0),
                         "autovacuum_status": data["autovacuum_status"],
-                        "hours_since_last_autovacuum": round(data["hours_since_last_autovacuum"], 1),
+                        "hours_since_last_autovacuum": round(data["hours_since_last_autovacuum"] or 0.0, 1),
                         "autovacuum_count": data["autovacuum_count"],
-                        "avg_modifications_per_autovacuum": round(data["avg_modifications_per_autovacuum"], 0),
+                        "avg_modifications_per_autovacuum": round(data["avg_modifications_per_autovacuum"] or 0.0, 0),
                     }
                 )
                 status_counts[data["autovacuum_status"]] += 1
@@ -290,10 +290,10 @@ class VacuumAnalysisTool:
                         "vacuum_count": data["vacuum_count"],
                         "autovacuum_count": data["autovacuum_count"],
                         "total_modifications": data["total_modifications"],
-                        "avg_modifications_per_vacuum": round(data["avg_modifications_per_vacuum"], 0),
-                        "hours_since_last_vacuum": round(data["hours_since_last_vacuum"], 1),
+                        "avg_modifications_per_vacuum": round(data["avg_modifications_per_vacuum"] or 0.0, 0),
+                        "hours_since_last_vacuum": round(data["hours_since_last_vacuum"] or 0.0, 1),
                         "table_size_mb": round(data["table_size_bytes"] / (1024 * 1024), 2),
-                        "avg_size_per_vacuum_mb": round(data["avg_size_per_vacuum"] / (1024 * 1024), 2),
+                        "avg_size_per_vacuum_mb": round((data["avg_size_per_vacuum"] or 0) / (1024 * 1024), 2),
                     }
                 )
 
@@ -378,16 +378,16 @@ class VacuumAnalysisTool:
         # Check transaction ID wraparound
         wraparound_query = """
             SELECT
-                schemaname,
-                relname,
-                age(relfrozenxid) as xid_age,
-                2000000000 - age(relfrozenxid) as xids_until_wraparound
+                s.schemaname,
+                s.relname,
+                age(c.relfrozenxid) as xid_age,
+                2000000000 - age(c.relfrozenxid) as xids_until_wraparound
             FROM pg_class c
             JOIN pg_namespace n ON c.relnamespace = n.oid
             JOIN pg_stat_user_tables s ON c.relname = s.relname AND n.nspname = s.schemaname
             WHERE c.relkind = 'r'
-            AND age(relfrozenxid) > 1500000000
-            ORDER BY age(relfrozenxid) DESC
+            AND age(c.relfrozenxid) > 1500000000
+            ORDER BY age(c.relfrozenxid) DESC
             LIMIT 10
         """
 
