@@ -1,23 +1,28 @@
 # PostgreSQL MCP Server Tool Analysis & Improvement Recommendations
 
 ## Overview
+
 Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for enhancements.
 
 ## Tool-by-Tool Analysis
 
 ### 1. `list_schemas()` - Line 85-108
-**Current functionality**: 
+
+**Current functionality**:
+
 - Queries `information_schema.schemata` for schema_name, schema_owner
 - Categorizes schemas as 'System Schema', 'System Information Schema', or 'User Schema'
 - Returns formatted list sorted by schema_type and name
 - Uses basic SQL with no parameters (safe)
 
 **Technical Implementation**:
+
 - Direct SQL query to information_schema
 - Simple categorization based on schema name patterns
 - Error handling with logging
 
 **Improvements**:
+
 - **Add schema size information**: Query `pg_namespace` joined with `pg_class` to calculate total size per schema
 - **Include permission/ownership details**: Add ACL information from `pg_namespace.nspacl`
 - **Add creation timestamps**: Include OID-based creation order (PostgreSQL doesn't track exact timestamps)
@@ -26,7 +31,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Include usage statistics**: Schema-level query statistics if available
 
 ### 2. `list_objects()` - Line 111-176
+
 **Current functionality**:
+
 - Supports object types: 'table', 'view', 'sequence', 'extension'
 - Uses parameterized queries via `SafeSqlDriver.execute_param_query()`
 - Queries information_schema for tables/views/sequences
@@ -34,11 +41,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Returns structured object information with schema, name, type
 
 **Technical Implementation**:
+
 - Type-specific query branches with different information_schema views
 - Parameter binding for security
 - Extensions handled separately from schema-specific objects
 
 **Improvements**:
+
 - **Add object size/row count estimates**: Join with `pg_class` for `reltuples`, `relpages` for size estimates
 - **Include last modified timestamps**: Query `pg_stat_user_tables.last_autoanalyze`, `last_vacuum` for maintenance info
 - **Add dependency information**: Query `pg_depend` to show object relationships
@@ -49,7 +58,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Show object permissions**: Include ACL information from respective system catalogs
 
 ### 3. `get_object_details()` - Line 179-309
+
 **Current functionality**:
+
 - **Tables/Views**: Queries columns (name, type, nullable, default), constraints (PK, FK, etc.), indexes
 - **Sequences**: Shows sequence metadata (data_type, start_value, increment)
 - **Extensions**: Displays extension name, version, relocatable status
@@ -57,11 +68,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Complex constraint parsing with grouping by constraint name
 
 **Technical Implementation**:
+
 - Multi-query approach: columns → constraints → indexes
 - Constraint aggregation logic to group columns by constraint name
 - Structured response with nested data (basic, columns, constraints, indexes)
 
 **Improvements**:
+
 - **Add table statistics**: Join with `pg_stat_user_tables` for row counts, vacuum/analyze timestamps, sequential scans
 - **Include foreign key relationships**: Parse `pg_constraint` for FK details including referenced table/columns
 - **Add table inheritance**: Query `pg_inherits` to show parent/child table relationships
@@ -73,7 +86,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Include storage parameters**: Show table-specific storage settings from `pg_class.reloptions`
 
 ### 4. `explain_query()` - Line 312-388
+
 **Current functionality**:
+
 - **Basic EXPLAIN**: Uses `ExplainPlanTool.explain()` for cost estimates
 - **EXPLAIN ANALYZE**: Real execution statistics via `explain_analyze()`
 - **Hypothetical indexes**: Integration with HypoPG extension for index simulation
@@ -82,11 +97,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Returns structured `ExplainPlanArtifact` or `ErrorResult`
 
 **Technical Implementation**:
+
 - Delegates to `ExplainPlanTool` class for actual execution
 - HypoPG extension validation via `check_hypopg_installation_status()`
 - Error handling with exception re-raising for proper error propagation
 
 **Improvements**:
+
 - **Add query cost comparison**: Automatically run explain before/after index creation to show cost delta
 - **Include buffer usage analysis**: Add `EXPLAIN (ANALYZE, BUFFERS)` option to show buffer cache hits/misses
 - **Add timing breakdown**: Include detailed timing with `EXPLAIN (ANALYZE, TIMING)` for operation-level timing
@@ -97,7 +114,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Plan stability analysis**: Compare plans across multiple executions to detect plan instability
 
 ### 5. `execute_sql()` - Line 392-404
+
 **Current functionality**:
+
 - Executes arbitrary SQL queries via `SqlDriver` or `SafeSqlDriver` based on access mode
 - Access mode determines tool description: "Execute any SQL query" vs "Execute a read-only SQL query"
 - Returns formatted results or "No results" message
@@ -105,11 +124,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Tool registration happens dynamically in `main()` based on access mode
 
 **Technical Implementation**:
+
 - Mode-dependent driver selection via `get_sql_driver()`
 - Simple result formatting with row.cells extraction
 - Dynamic tool registration with mode-appropriate descriptions
 
 **Improvements**:
+
 - **Add query execution time reporting**: Instrument query execution with timing metrics
 - **Include affected row count for DML operations**: Parse and report affected rows for INSERT/UPDATE/DELETE
 - **Add query caching for repeated queries**: Implement query plan caching for frequently executed queries
@@ -122,7 +143,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Result set limiting**: Automatic limiting of large result sets with pagination
 
 ### 6. `analyze_workload_indexes()` - Line 407-425
+
 **Current functionality**:
+
 - Supports two methods: "dta" (DatabaseTuningAdvisor) and "llm" (LLMOptimizerTool)
 - Uses `TextPresentation` wrapper for user-friendly output formatting
 - Configurable max index size limit (default 10GB)
@@ -130,11 +153,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Returns text-formatted recommendations
 
 **Technical Implementation**:
+
 - **DTA Method**: Algorithmic Pareto-based optimization with budget constraints
 - **LLM Method**: AI-powered recommendations using OpenAI integration
 - Unified interface through `TextPresentation.analyze_workload()`
 
 **Improvements**:
+
 - **Add cost-benefit analysis**: Calculate query performance improvement vs. index maintenance cost
 - **Include maintenance overhead estimates**: Estimate INSERT/UPDATE/DELETE performance impact
 - **Support for partial indexes**: Analyze WHERE clause patterns to suggest partial indexes
@@ -147,7 +172,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Implementation priority ranking**: Order recommendations by expected performance impact
 
 ### 7. `analyze_query_indexes()` - Line 428-452
+
 **Current functionality**:
+
 - Accepts up to 10 queries for analysis (MAX_NUM_INDEX_TUNING_QUERIES = 10)
 - Supports both "dta" and "llm" analysis methods
 - Input validation for empty lists and query count limits
@@ -155,11 +182,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Configurable max index size limit
 
 **Technical Implementation**:
+
 - Query count validation with specific error messages
 - Same dual-method approach (DTA algorithmic vs LLM AI-powered)
 - Direct query list processing without workload extraction
 
 **Improvements**:
+
 - **Add query rewrite suggestions**: Analyze query patterns to suggest more efficient formulations
 - **Include join order optimization hints**: Suggest optimal join sequences and methods
 - **Support for covering indexes**: Recommend covering indexes to eliminate table lookups
@@ -172,10 +201,12 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Execution plan comparison**: Show before/after execution plans with recommended indexes
 
 ### 8. `analyze_db_health()` - Line 467-481
+
 **Current functionality**:
+
 - **Multi-component health system**: Coordinates 7 different health calculators
   - `IndexHealthCalc`: Invalid, duplicate, bloated indexes
-  - `ConnectionHealthCalc`: Connection utilization and limits  
+  - `ConnectionHealthCalc`: Connection utilization and limits
   - `VacuumHealthCalc`: Transaction ID wraparound protection
   - `SequenceHealthCalc`: Sequences near maximum values
   - `ReplicationCalc`: Replication lag and slot health
@@ -185,11 +216,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Comma-separated health type specification
 
 **Technical Implementation**:
+
 - `DatabaseHealthTool` orchestrates multiple specialized calculators
 - Each calculator focuses on specific database subsystem
 - Unified interface with consistent reporting format
 
 **Improvements**:
+
 - **Add severity levels**: Implement WARNING/CRITICAL/INFO classification for all issues
 - **Include remediation steps**: Provide specific SQL commands and procedures for each issue
 - **Add trend analysis**: Store historical health data to show trends over time
@@ -202,7 +235,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Best practices compliance**: Check against PostgreSQL performance best practices
 
 ### 9. `get_top_queries()` - Line 488-511
+
 **Current functionality**:
+
 - **Requires `pg_stat_statements` extension** for query performance data
 - **Three sorting modes**:
   - "resources": Resource-intensive queries (complex algorithm)
@@ -212,11 +247,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Uses `TopQueriesCalc` class for analysis
 
 **Technical Implementation**:
+
 - Extension dependency validation for `pg_stat_statements`
 - Mode-specific analysis with different ranking algorithms
 - Resource mode uses sophisticated scoring beyond simple time metrics
 
 **Improvements**:
+
 - **Add query fingerprinting**: Normalize queries to group similar patterns (remove literals, etc.)
 - **Include query optimization suggestions**: Integrate with explain plan analysis for specific recommendations
 - **Add execution plan changes over time**: Track plan stability and detect plan regressions
@@ -229,7 +266,9 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Query complexity metrics**: Add complexity scoring based on joins, subqueries, etc.
 
 ### 10. `get_database_overview()` - Line 514-528
+
 **Current functionality**:
+
 - **Comprehensive analysis system** using `DatabaseOverviewTool`
 - **Configurable parameters**:
   - `max_tables`: Limit analysis scope (default 500 tables per schema)
@@ -239,24 +278,28 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - Protection against analysis of very large databases
 
 **Technical Implementation**:
+
 - Sophisticated sampling algorithms for large dataset handling
 - Timeout protection to prevent runaway analysis
 - Configurable scope limiting for performance
 
 **Improvements**:
+
 - **Add performance baselines**: Establish and compare against historical performance baselines
 - **Include security vulnerability scanning**: Check for common PostgreSQL security misconfigurations
 - **Add compliance checking**: Validate naming conventions, constraint patterns, index strategies
 - **Include database growth projections**: Analyze growth trends to predict future capacity needs
 - **Add configuration recommendations**: Compare current settings against best practices
-- **Schema relationship mapping**: Visual representation of inter-schema dependencies
+- **Schema relationship mapping**: Visual representation of inter-schema dependencies ✅ DONE (commit: 2458526)
 - **Performance hotspot identification**: Highlight tables/queries causing performance issues
 - **Storage optimization opportunities**: Identify tables needing VACUUM, REINDEX, or partitioning
 - **Security posture assessment**: Check permissions, encryption, audit settings
 - **Migration readiness assessment**: Evaluate readiness for PostgreSQL version upgrades
 
 ### 11. `get_blocking_queries()` - Line 531-541
+
 **Current functionality**:
+
 - **Modern PostgreSQL lock analysis** using `BlockingQueriesAnalyzer`
 - **Comprehensive blocking detection**: Uses `pg_blocking_pids()` (PostgreSQL 9.6+)
 - **Lock hierarchy analysis**: Shows blocking tree structures and relationships
@@ -264,11 +307,13 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 - **Recommendations included**: Provides analysis and actionable recommendations
 
 **Technical Implementation**:
+
 - Leverages modern PostgreSQL lock detection features
 - Advanced lock tree construction algorithms
 - Wait event correlation and analysis
 
 **Improvements**:
+
 - **Add lock wait graph visualization**: Generate visual representation of blocking hierarchies
 - **Include deadlock detection and analysis**: Monitor `pg_stat_database.deadlocks` and provide deadlock analysis
 - **Add session termination recommendations**: Suggest which sessions to terminate to resolve blocking
@@ -283,40 +328,47 @@ Analysis of all tools in `src/postgres_mcp/server.py` with recommendations for e
 ## Cross-Cutting Improvements
 
 ### Error Handling
+
 - Implement structured error responses with error codes
 - Add retry logic for transient failures
 - Include context-specific error messages
 
 ### Performance
+
 - Add connection pooling optimization
 - Implement query result caching
 - Add async query execution for long-running operations
 - Include query timeout handling
 
 ### Security
+
 - Add query sanitization improvements
 - Include audit logging for sensitive operations
 - Add role-based access control integration
 - Include data masking for sensitive fields
 
 ### Monitoring
+
 - Add performance metrics collection
 - Include tool usage analytics
 - Add health check endpoints
 - Include resource utilization tracking
 
 ### Documentation
+
 - Add inline examples for each tool
 - Include parameter validation descriptions
 - Add best practices recommendations
 - Include troubleshooting guides
 
 ## Priority Implementation Order
+
 1. **High Priority**: Error handling improvements, security enhancements
 2. **Medium Priority**: Performance optimizations, additional statistics
 3. **Low Priority**: Advanced analytics, visualization features
 
 ## Implementation Notes
+
 - All improvements should maintain backward compatibility
 - Consider adding feature flags for optional enhancements
 - Implement comprehensive testing for new features

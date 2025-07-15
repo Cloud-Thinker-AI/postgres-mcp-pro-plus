@@ -185,3 +185,5 @@ devenv.local.nix
 *.sql
 
 .env/
+
+.claude

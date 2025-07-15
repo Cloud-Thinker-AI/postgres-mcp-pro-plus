@@ -1,4 +1,5 @@
-# ruff: noqa: B008
+"""Postgres MCP Server."""
+
 import argparse
 import asyncio
 import logging
@@ -28,12 +29,14 @@ from .explain import ExplainPlanTool
 from .index.index_opt_base import MAX_NUM_INDEX_TUNING_QUERIES
 from .index.llm_opt import LLMOptimizerTool
 from .index.presentation import TextPresentation
+from .schema_mapping import SchemaMappingTool
 from .sql import DbConnPool
 from .sql import SafeSqlDriver
 from .sql import SqlDriver
 from .sql import check_hypopg_installation_status
 from .sql import obfuscate_password
 from .top_queries import TopQueriesCalc
+from .vacuum_analysis import VacuumAnalysisTool
 
 # Initialize FastMCP with default settings
 mcp = FastMCP("postgres-mcp")
@@ -528,6 +531,36 @@ async def get_database_overview(
         return format_error_response(str(e))
 
 
+@mcp.tool(description="Analyze schema relationships and dependencies with visual representation")
+async def analyze_schema_relationships() -> ResponseType:
+    """Analyze inter-schema dependencies and relationships with visual representation data."""
+    try:
+        sql_driver = await get_sql_driver()
+        mapping_tool = SchemaMappingTool(sql_driver)
+
+        # Get user schemas
+        user_schemas_query = """
+            SELECT schema_name
+            FROM information_schema.schemata
+            WHERE schema_name NOT IN ('information_schema', 'pg_catalog', 'pg_toast')
+            AND schema_name NOT LIKE 'pg_temp_%'
+            AND schema_name NOT LIKE 'pg_toast_temp_%'
+            ORDER BY schema_name
+        """
+
+        rows = await sql_driver.execute_query(user_schemas_query)
+        user_schemas = [row.cells["schema_name"] for row in rows] if rows else []
+
+        # Analyze schema relationships
+        result = await mapping_tool.analyze_schema_relationships(user_schemas)
+
+        return format_text_response(result)
+
+    except Exception as e:
+        logger.error(f"Error analyzing schema relationships: {e}")
+        return format_error_response(str(e))
+
+
 @mcp.tool(description="Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations")
 async def get_blocking_queries() -> ResponseType:
     """Get comprehensive information about blocking queries and locks in the database with analysis and recommendations."""
@@ -540,6 +573,22 @@ async def get_blocking_queries() -> ResponseType:
         logger.error(f"Error getting blocking queries: {e}")
         return format_error_response(str(e))
 
+
+@mcp.tool(description="Comprehensive vacuum analysis with maintenance recommendations and bloat detection")
+async def analyze_vacuum_requirements() -> ResponseType:
+    """Analyze database vacuum requirements with comprehensive recommendations for maintenance."""
+    try:
+        sql_driver = await get_sql_driver()
+        vacuum_tool = VacuumAnalysisTool(sql_driver)
+
+        # Perform comprehensive vacuum analysis
+        result = await vacuum_tool.analyze_vacuum_requirements()
+
+        return format_text_response(result)
+
+    except Exception as e:
+        logger.error(f"Error analyzing vacuum requirements: {e}")
+        return format_error_response(str(e))
 
 async def main():
     # Parse command line arguments

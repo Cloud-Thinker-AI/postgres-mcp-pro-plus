@@ -4,8 +4,10 @@ Provides comprehensive analysis of query locks and blocking relationships.
 """
 
 import logging
-from typing import Any, Dict, List
 from datetime import datetime
+from typing import Any
+from typing import Dict
+from typing import List
 
 from .sql import SqlDriver
 
@@ -107,13 +109,8 @@ class BlockingQueriesAnalyzer:
                     "status": "healthy",
                     "message": "No blocking queries found - all queries are running without locks.",
                     "blocking_queries": [],
-                    "summary": {
-                        "total_blocked": 0,
-                        "total_blocking": 0,
-                        "max_wait_time": 0,
-                        "affected_relations": []
-                    },
-                    "recommendations": []
+                    "summary": {"total_blocked": 0, "total_blocking": 0, "max_wait_time": 0, "affected_relations": []},
+                    "recommendations": [],
                 }
 
             # Process blocking queries data with improved structure
@@ -134,43 +131,46 @@ class BlockingQueriesAnalyzer:
                 if row.cells["affected_relations"]:
                     relations.update(row.cells["affected_relations"].split(", "))
 
-                blocking_data.append({
-                    "blocked_process": {
-                        "pid": row.cells["blocked_pid"],
-                        "user": row.cells["blocked_user"],
-                        "application": row.cells["blocked_application"],
-                        "client_addr": row.cells["blocked_client_addr"],
-                        "state": row.cells["blocked_state"],
-                        "query_start": row.cells["blocked_query_start"],
-                        "state_change": row.cells["blocked_state_change"],
-                        "wait_event": row.cells["blocked_wait_event"],
-                        "wait_event_type": row.cells["blocked_wait_event_type"],
-                        "duration_seconds": duration,
-                        "state_duration_seconds": float(row.cells["blocked_state_duration_seconds"]) if row.cells["blocked_state_duration_seconds"] else 0,
-                        "wait_duration_seconds": float(row.cells["blocked_wait_duration_seconds"]) if row.cells["blocked_wait_duration_seconds"] else 0,
-                        "query": row.cells["blocked_query"]
-                    },
-                    "blocking_process": {
-                        "pid": row.cells["blocking_pid"],
-                        "user": row.cells["blocking_user"],
-                        "application": row.cells["blocking_application"],
-                        "client_addr": row.cells["blocking_client_addr"],
-                        "state": row.cells["blocking_state"],
-                        "query_start": row.cells["blocking_query_start"],
-                        "duration_seconds": float(row.cells["blocking_duration_seconds"]) if row.cells["blocking_duration_seconds"] else 0,
-                        "query": row.cells["blocking_query"]
-                    },
-                    "lock_info": {
-                        "types": row.cells["lock_types"],
-                        "modes": row.cells["lock_modes"],
-                        "count": row.cells["lock_count"],
-                        "affected_relations": row.cells["affected_relations"]
-                    },
-                    "blocking_hierarchy": {
-                        "all_blocking_pids": row.cells["blocking_pids"],
-                        "immediate_blocker": row.cells["blocking_pid"]
+                blocking_data.append(
+                    {
+                        "blocked_process": {
+                            "pid": row.cells["blocked_pid"],
+                            "user": row.cells["blocked_user"],
+                            "application": row.cells["blocked_application"],
+                            "client_addr": row.cells["blocked_client_addr"],
+                            "state": row.cells["blocked_state"],
+                            "query_start": row.cells["blocked_query_start"],
+                            "state_change": row.cells["blocked_state_change"],
+                            "wait_event": row.cells["blocked_wait_event"],
+                            "wait_event_type": row.cells["blocked_wait_event_type"],
+                            "duration_seconds": duration,
+                            "state_duration_seconds": (
+                                float(row.cells["blocked_state_duration_seconds"]) if row.cells["blocked_state_duration_seconds"] else 0
+                            ),
+                            "wait_duration_seconds": (
+                                float(row.cells["blocked_wait_duration_seconds"]) if row.cells["blocked_wait_duration_seconds"] else 0
+                            ),
+                            "query": row.cells["blocked_query"],
+                        },
+                        "blocking_process": {
+                            "pid": row.cells["blocking_pid"],
+                            "user": row.cells["blocking_user"],
+                            "application": row.cells["blocking_application"],
+                            "client_addr": row.cells["blocking_client_addr"],
+                            "state": row.cells["blocking_state"],
+                            "query_start": row.cells["blocking_query_start"],
+                            "duration_seconds": float(row.cells["blocking_duration_seconds"]) if row.cells["blocking_duration_seconds"] else 0,
+                            "query": row.cells["blocking_query"],
+                        },
+                        "lock_info": {
+                            "types": row.cells["lock_types"],
+                            "modes": row.cells["lock_modes"],
+                            "count": row.cells["lock_count"],
+                            "affected_relations": row.cells["affected_relations"],
+                        },
+                        "blocking_hierarchy": {"all_blocking_pids": row.cells["blocking_pids"], "immediate_blocker": row.cells["blocking_pid"]},
                     }
-                })
+                )
 
             # Generate summary and recommendations
             summary = {
@@ -178,17 +178,12 @@ class BlockingQueriesAnalyzer:
                 "total_blocking": len(blocking_pids),
                 "max_wait_time_seconds": max_wait_time,
                 "affected_relations": list(relations),
-                "analysis_timestamp": datetime.now().isoformat()
+                "analysis_timestamp": datetime.now().isoformat(),
             }
 
             recommendations = self._generate_recommendations(blocking_data, summary)
 
-            return {
-                "status": "blocking_detected",
-                "blocking_queries": blocking_data,
-                "summary": summary,
-                "recommendations": recommendations
-            }
+            return {"status": "blocking_detected", "blocking_queries": blocking_data, "summary": summary, "recommendations": recommendations}
         except Exception as e:
             logger.error(f"Error analyzing blocking queries: {e}")
             raise
@@ -212,17 +207,16 @@ class BlockingQueriesAnalyzer:
             lock_summary = []
             if rows:
                 for row in rows:
-                    lock_summary.append({
-                        "lock_type": row.cells["locktype"],
-                        "mode": row.cells["mode"],
-                        "granted": row.cells["granted"],
-                        "count": row.cells["lock_count"]
-                    })
+                    lock_summary.append(
+                        {
+                            "lock_type": row.cells["locktype"],
+                            "mode": row.cells["mode"],
+                            "granted": row.cells["granted"],
+                            "count": row.cells["lock_count"],
+                        }
+                    )
 
-            return {
-                "lock_summary": lock_summary,
-                "timestamp": datetime.now().isoformat()
-            }
+            return {"lock_summary": lock_summary, "timestamp": datetime.now().isoformat()}
         except Exception as e:
             logger.error(f"Error getting lock summary: {e}")
             raise
@@ -250,16 +244,9 @@ class BlockingQueriesAnalyzer:
             settings = {}
             if rows:
                 for row in rows:
-                    settings[row.cells["name"]] = {
-                        "value": row.cells["setting"],
-                        "unit": row.cells["unit"],
-                        "category": row.cells["category"]
-                    }
+                    settings[row.cells["name"]] = {"value": row.cells["setting"], "unit": row.cells["unit"], "category": row.cells["category"]}
 
-            return {
-                "deadlock_settings": settings,
-                "timestamp": datetime.now().isoformat()
-            }
+            return {"deadlock_settings": settings, "timestamp": datetime.now().isoformat()}
         except Exception as e:
             logger.error(f"Error getting deadlock info: {e}")
             raise
@@ -275,8 +262,7 @@ class BlockingQueriesAnalyzer:
             )
         elif summary["max_wait_time_seconds"] > 60:  # 1 minute
             recommendations.append(
-                f"⚠️ WARNING: Queries blocked for {summary['max_wait_time_seconds']:.1f} seconds. "
-                "Monitor closely and consider intervention."
+                f"⚠️ WARNING: Queries blocked for {summary['max_wait_time_seconds']:.1f} seconds. " "Monitor closely and consider intervention."
             )
 
         if summary["total_blocked"] > 10:
@@ -301,16 +287,14 @@ class BlockingQueriesAnalyzer:
 
         if "relation" in lock_types:
             recommendations.append(
-                "💡 OPTIMIZATION: Table-level locks detected. "
-                "Review queries for table scans and consider adding appropriate indexes."
+                "💡 OPTIMIZATION: Table-level locks detected. " "Review queries for table scans and consider adding appropriate indexes."
             )
 
         # Check for same relations being blocked multiple times
         if len(summary["affected_relations"]) < summary["total_blocked"] / 2:
             recommendations.append(
                 "🎯 HOTSPOT: Multiple queries are contending for the same tables. "
-                "Focus optimization efforts on these hot tables: " +
-                ", ".join(summary["affected_relations"])
+                "Focus optimization efforts on these hot tables: " + ", ".join(summary["affected_relations"])
             )
 
         # Add recommendations based on wait events
@@ -322,13 +306,10 @@ class BlockingQueriesAnalyzer:
 
         if "Lock" in wait_events:
             recommendations.append(
-                "🔒 LOCK ANALYSIS: High lock contention detected. "
-                "Consider query optimization, index tuning, or connection pooling."
+                "🔒 LOCK ANALYSIS: High lock contention detected. " "Consider query optimization, index tuning, or connection pooling."
             )
 
         if not recommendations:
-            recommendations.append(
-                "✅ Current blocking situation appears manageable. Monitor for patterns and trends."
-            )
+            recommendations.append("✅ Current blocking situation appears manageable. Monitor for patterns and trends.")
 
         return recommendations

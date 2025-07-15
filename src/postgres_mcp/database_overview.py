@@ -11,6 +11,8 @@ import logging
 import time
 from typing import Any
 
+from .schema_mapping import SchemaMappingTool
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,8 +24,9 @@ class DatabaseOverviewTool:
         self.max_tables_per_schema = 100  # Limit tables per schema
         self.enable_sampling = True  # Use sampling for large datasets
         self.timeout_seconds = 300  # 5 minute timeout
+        self.schema_mapping_tool = SchemaMappingTool(sql_driver)
 
-    async def get_database_overview(self, max_tables: int = 500, sampling_mode: bool = True, timeout: int = 300) -> dict[str, Any]:
+    async def get_database_overview(self, max_tables: int = 500, sampling_mode: bool = True, timeout: int = 300):
         """Get comprehensive database overview with performance and security analysis.
 
         Args:
@@ -34,10 +37,7 @@ class DatabaseOverviewTool:
         start_time = time.time()
         try:
             # Add timeout wrapper
-            return await asyncio.wait_for(
-                self._get_database_overview_internal(max_tables, sampling_mode, start_time),
-                timeout=timeout
-            )
+            return await asyncio.wait_for(self._get_database_overview_internal(max_tables, sampling_mode, start_time), timeout=timeout)
         except asyncio.TimeoutError:
             logger.warning(f"Database overview timed out after {timeout} seconds")
             return {
@@ -80,8 +80,8 @@ class DatabaseOverviewTool:
                     "sampling_mode": sampling_mode,
                     "timeout": self.timeout_seconds,
                     "tables_analyzed": 0,
-                    "tables_skipped": 0
-                }
+                    "tables_skipped": 0,
+                },
             }
 
             # Get database-wide performance metrics
@@ -125,9 +125,13 @@ class DatabaseOverviewTool:
             await self._get_security_overview(db_info)
 
             # Build relationship summary
-            await self._build_relationship_summary(
-                db_info, all_relationships, table_connections, user_schemas
-            )
+            await self._build_relationship_summary(db_info, all_relationships, table_connections, user_schemas)
+
+            # Add schema relationship mapping
+            await self._add_schema_relationship_mapping(db_info, user_schemas)
+
+            # Add performance hotspot identification
+            await self._identify_performance_hotspots(db_info, all_tables_with_stats)
 
             # Add execution timing
             execution_time = time.time() - start_time
@@ -173,9 +177,7 @@ class DatabaseOverviewTool:
                 "active_connections": row["active_connections"],
                 "total_connections": row["total_connections"],
                 "max_connections": row["max_connections"],
-                "connection_usage_percent": round(
-                    (row["total_connections"] / row["max_connections"]) * 100, 2
-                ) if row["max_connections"] > 0 else 0,
+                "connection_usage_percent": round((row["total_connections"] / row["max_connections"]) * 100, 2) if row["max_connections"] > 0 else 0,
             }
 
     async def _process_schema(
@@ -215,7 +217,7 @@ class DatabaseOverviewTool:
             "tables": {},
             "tables_analyzed": len(tables_to_process),
             "tables_skipped": tables_skipped,
-            "is_sampled": tables_skipped > 0
+            "is_sampled": tables_skipped > 0,
         }
 
         # Get bulk table statistics
@@ -580,3 +582,163 @@ class DatabaseOverviewTool:
                 return f"{value:.1f} {unit}"
             value /= 1024.0
         return f"{value:.1f} PB"
+
+    async def _identify_performance_hotspots(self, db_info: dict[str, Any], all_tables_with_stats: list[dict[str, Any]]) -> None:
+        """Identify performance hotspots in the database."""
+        try:
+            logger.info("Identifying performance hotspots...")
+
+            hotspots = {
+                "high_scan_ratio_tables": [],
+                "high_dead_tuple_tables": [],
+                "large_tables_with_issues": [],
+                "high_modification_tables": [],
+                "tables_needing_maintenance": [],
+                "summary": {"total_hotspots": 0, "critical_issues": 0, "warning_issues": 0},
+            }
+
+            for table_info in all_tables_with_stats:
+                schema = table_info["schema"]
+                table = table_info["table"]
+                stats = table_info
+
+                # Calculate derived metrics
+                total_scans = stats.get("seq_scans", 0) + stats.get("idx_scans", 0)
+                seq_scan_ratio = (stats.get("seq_scans", 0) / total_scans) if total_scans > 0 else 0
+                dead_tuple_ratio = (
+                    (stats.get("dead_tuples", 0) / (stats.get("live_tuples", 0) + stats.get("dead_tuples", 0)))
+                    if (stats.get("live_tuples", 0) + stats.get("dead_tuples", 0)) > 0
+                    else 0
+                )
+                size_mb = stats.get("size_bytes", 0) / (1024 * 1024)
+
+                # Identify high sequential scan ratio tables (>50% seq scans on tables with >1000 scans)
+                if seq_scan_ratio > 0.5 and total_scans > 1000:
+                    hotspots["high_scan_ratio_tables"].append(
+                        {
+                            "qualified_name": f"{schema}.{table}",
+                            "seq_scan_ratio": round(seq_scan_ratio * 100, 1),
+                            "total_scans": total_scans,
+                            "seq_scans": stats.get("seq_scans", 0),
+                            "size_mb": round(size_mb, 2),
+                            "severity": "HIGH" if seq_scan_ratio > 0.8 else "MEDIUM",
+                        }
+                    )
+
+                # Identify tables with high dead tuple ratio (>20%)
+                if dead_tuple_ratio > 0.2:
+                    hotspots["high_dead_tuple_tables"].append(
+                        {
+                            "qualified_name": f"{schema}.{table}",
+                            "dead_tuple_ratio": round(dead_tuple_ratio * 100, 1),
+                            "dead_tuples": stats.get("dead_tuples", 0),
+                            "live_tuples": stats.get("live_tuples", 0),
+                            "size_mb": round(size_mb, 2),
+                            "severity": "HIGH" if dead_tuple_ratio > 0.4 else "MEDIUM",
+                        }
+                    )
+
+                # Identify large tables with performance issues (>100MB with issues)
+                if size_mb > 100:
+                    issues = []
+                    if seq_scan_ratio > 0.3:
+                        issues.append(f"High seq scan ratio ({seq_scan_ratio * 100:.1f}%)")
+                    if dead_tuple_ratio > 0.1:
+                        issues.append(f"High dead tuple ratio ({dead_tuple_ratio * 100:.1f}%)")
+                    if total_scans > 10000 and stats.get("idx_scans", 0) == 0:
+                        issues.append("No index scans despite high activity")
+
+                    if issues:
+                        hotspots["large_tables_with_issues"].append(
+                            {
+                                "qualified_name": f"{schema}.{table}",
+                                "size_mb": round(size_mb, 2),
+                                "issues": issues,
+                                "total_scans": total_scans,
+                                "severity": "HIGH" if len(issues) > 1 else "MEDIUM",
+                            }
+                        )
+
+                # Identify tables with high modification rates
+                total_modifications = stats.get("total_modifications", 0)
+                if total_modifications > 100000:  # Tables with >100k modifications
+                    hotspots["high_modification_tables"].append(
+                        {
+                            "qualified_name": f"{schema}.{table}",
+                            "total_modifications": total_modifications,
+                            "inserts": stats.get("inserts", 0),
+                            "updates": stats.get("updates", 0),
+                            "deletes": stats.get("deletes", 0),
+                            "size_mb": round(size_mb, 2),
+                            "severity": "HIGH" if total_modifications > 1000000 else "MEDIUM",
+                        }
+                    )
+
+                # Generate maintenance recommendations
+                maintenance_needed = []
+                if dead_tuple_ratio > 0.2:
+                    maintenance_needed.append("VACUUM recommended")
+                if dead_tuple_ratio > 0.4:
+                    maintenance_needed.append("VACUUM FULL may be needed")
+                if seq_scan_ratio > 0.5 and total_scans > 1000:
+                    maintenance_needed.append("Consider adding indexes")
+                if stats.get("n_mod_since_analyze", 0) > stats.get("live_tuples", 0) * 0.1:
+                    maintenance_needed.append("ANALYZE recommended")
+
+                if maintenance_needed:
+                    hotspots["tables_needing_maintenance"].append(
+                        {
+                            "qualified_name": f"{schema}.{table}",
+                            "recommendations": maintenance_needed,
+                            "size_mb": round(size_mb, 2),
+                            "priority": "HIGH" if len(maintenance_needed) > 1 else "MEDIUM",
+                        }
+                    )
+
+            # Sort all hotspot lists by severity and size
+            for hotspot_type in ["high_scan_ratio_tables", "high_dead_tuple_tables", "large_tables_with_issues", "high_modification_tables"]:
+                hotspots[hotspot_type] = sorted(hotspots[hotspot_type], key=lambda x: (x["severity"] == "HIGH", x.get("size_mb", 0)), reverse=True)[
+                    :10
+                ]  # Limit to top 10
+
+            hotspots["tables_needing_maintenance"] = sorted(
+                hotspots["tables_needing_maintenance"], key=lambda x: (x["priority"] == "HIGH", x.get("size_mb", 0)), reverse=True
+            )[:10]
+
+            # Calculate summary statistics
+            total_hotspots = sum(len(hotspots[key]) for key in hotspots if key != "summary")
+            critical_issues = sum(
+                1
+                for hotspot_list in hotspots.values()
+                if isinstance(hotspot_list, list)
+                for item in hotspot_list
+                if item.get("severity") == "HIGH" or item.get("priority") == "HIGH"
+            )
+            warning_issues = total_hotspots - critical_issues
+
+            hotspots["summary"] = {"total_hotspots": total_hotspots, "critical_issues": critical_issues, "warning_issues": warning_issues}
+
+            db_info["performance_hotspots"] = hotspots
+            logger.info(f"Performance hotspot analysis complete: {total_hotspots} hotspots identified")
+
+        except Exception as e:
+            logger.error(f"Error identifying performance hotspots: {e}")
+            db_info["performance_hotspots"] = {"error": f"Failed to identify performance hotspots: {e!s}"}
+
+    async def _add_schema_relationship_mapping(self, db_info: dict[str, Any], user_schemas: list[str]) -> None:
+        """Add schema relationship mapping analysis to database overview."""
+        try:
+            logger.info("Analyzing schema relationships...")
+
+            # Perform schema relationship analysis
+            schema_mapping_results = await self.schema_mapping_tool.analyze_schema_relationships(user_schemas)
+
+            # Add to database info
+            db_info["schema_relationship_mapping"] = schema_mapping_results
+
+            cross_schema_count = schema_mapping_results["summary"]["cross_schema_relationships"]
+            logger.info(f"Schema relationship mapping complete: {cross_schema_count} cross-schema relationships")
+
+        except Exception as e:
+            logger.error(f"Error adding schema relationship mapping: {e}")
+            db_info["schema_relationship_mapping"] = {"error": f"Failed to analyze schema relationships: {e!s}"}
