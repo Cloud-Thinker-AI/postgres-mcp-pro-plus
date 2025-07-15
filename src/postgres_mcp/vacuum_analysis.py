@@ -18,7 +18,7 @@ class VacuumAnalysisTool:
     def __init__(self, sql_driver):
         self.sql_driver = sql_driver
 
-    async def analyze_vacuum_requirements(self) -> dict[str, Any]:
+    async def analyze_vacuum_requirements(self) -> str:
         """Perform comprehensive vacuum analysis and return structured results."""
         try:
             logger.info("Starting comprehensive vacuum analysis...")
@@ -55,11 +55,11 @@ class VacuumAnalysisTool:
             await self._generate_configuration_recommendations(analysis_results)
 
             logger.info("Vacuum analysis completed successfully")
-            return analysis_results
+            return self._format_as_text(analysis_results)
 
         except Exception as e:
             logger.error(f"Error in vacuum analysis: {e}")
-            return {
+            error_result = {
                 "error": f"Vacuum analysis failed: {e!s}",
                 "summary": {},
                 "bloat_analysis": {},
@@ -69,6 +69,7 @@ class VacuumAnalysisTool:
                 "critical_issues": [],
                 "configuration_recommendations": [],
             }
+            return self._format_as_text(error_result)
 
     async def _get_vacuum_summary(self, analysis_results: dict[str, Any]) -> None:
         """Get high-level vacuum summary statistics."""
@@ -498,3 +499,206 @@ class VacuumAnalysisTool:
             )
 
         analysis_results["configuration_recommendations"] = config_recommendations
+    
+    def _format_as_text(self, result: dict[str, Any]) -> str:
+        """Format vacuum analysis result as human-readable text."""
+        if "error" in result:
+            return f"❌ Error: {result['error']}"
+        
+        output = []
+        
+        # Header
+        output.append("🧹 VACUUM ANALYSIS REPORT")
+        output.append("=" * 50)
+        
+        # Summary
+        summary = result.get("summary", {})
+        if summary:
+            output.append("📊 SUMMARY")
+            output.append("-" * 30)
+            output.append(f"Total Tables: {summary.get('total_tables', 0)}")
+            output.append(f"Tables with Vacuum History: {summary.get('tables_with_vacuum_history', 0)}")
+            output.append(f"Tables Never Vacuumed: {summary.get('tables_never_vacuumed', 0)}")
+            output.append(f"Tables with Dead Tuples: {summary.get('tables_with_dead_tuples', 0)}")
+            output.append(f"Total Dead Tuples: {summary.get('total_dead_tuples', 0):,}")
+            output.append(f"Total Live Tuples: {summary.get('total_live_tuples', 0):,}")
+            output.append(f"Average Dead Tuple %: {summary.get('avg_dead_tuple_percentage', 0):.2f}%")
+            output.append(f"Tables Not Vacuumed (24h): {summary.get('tables_not_vacuumed_24h', 0)}")
+            output.append("")
+        
+        # Critical Issues
+        critical_issues = result.get("critical_issues", [])
+        if critical_issues:
+            output.append("🚨 CRITICAL ISSUES")
+            output.append("-" * 30)
+            for i, issue in enumerate(critical_issues, 1):
+                output.append(f"{i}. {issue['type']}")
+                output.append(f"   Severity: {issue['severity']}")
+                output.append(f"   Table: {issue['table']}")
+                output.append(f"   Description: {issue['description']}")
+                output.append(f"   Action Required: {issue['action_required']}")
+                if issue.get('time_sensitive'):
+                    output.append(f"   ⏰ TIME SENSITIVE")
+                output.append("")
+        
+        # Bloat Analysis
+        bloat_analysis = result.get("bloat_analysis", {})
+        if bloat_analysis:
+            output.append("💀 BLOAT ANALYSIS")
+            output.append("-" * 30)
+            
+            severity_dist = bloat_analysis.get("severity_distribution", {})
+            output.append(f"Severity Distribution:")
+            for severity, count in severity_dist.items():
+                if count > 0:
+                    severity_emoji = {
+                        'CRITICAL': '🔴',
+                        'HIGH': '🟠',
+                        'MEDIUM': '🟡',
+                        'LOW': '🟢',
+                        'HEALTHY': '✅'
+                    }.get(severity, '⚪')
+                    output.append(f"  {severity_emoji} {severity}: {count} tables")
+            
+            high_priority = bloat_analysis.get("high_priority_tables", [])
+            if high_priority:
+                output.append(f"\n🎯 High Priority Tables ({len(high_priority)}):")
+                for table in high_priority[:10]:  # Show top 10
+                    output.append(f"  • {table['qualified_name']}")
+                    output.append(f"    Dead Tuples: {table['dead_percentage']:.1f}% ({table['dead_tuples']:,} dead, {table['live_tuples']:,} live)")
+                    output.append(f"    Size: {table['total_size_mb']:.1f} MB")
+                    output.append(f"    Severity: {table['bloat_severity']}")
+                    output.append(f"    Recommendation: {table['recommendation']}")
+                    
+                    if table['last_vacuum']:
+                        output.append(f"    Last Manual Vacuum: {table['last_vacuum']}")
+                    if table['last_autovacuum']:
+                        output.append(f"    Last Autovacuum: {table['last_autovacuum']}")
+                    output.append("")
+        
+        # Autovacuum Analysis
+        autovacuum_analysis = result.get("autovacuum_analysis", {})
+        if autovacuum_analysis:
+            output.append("🤖 AUTOVACUUM ANALYSIS")
+            output.append("-" * 30)
+            
+            status_dist = autovacuum_analysis.get("status_distribution", {})
+            output.append(f"Status Distribution:")
+            for status, count in status_dist.items():
+                if count > 0:
+                    status_emoji = {
+                        'OVERDUE': '🔴',
+                        'APPROACHING': '🟡',
+                        'HEALTHY': '✅'
+                    }.get(status, '⚪')
+                    output.append(f"  {status_emoji} {status}: {count} tables")
+            
+            problematic = autovacuum_analysis.get("problematic_tables", [])
+            if problematic:
+                output.append(f"\n⚠️ Problematic Tables ({len(problematic)}):")
+                for table in problematic[:10]:  # Show top 10
+                    output.append(f"  • {table['qualified_name']}")
+                    output.append(f"    Status: {table['autovacuum_status']}")
+                    output.append(f"    Dead Tuples: {table['dead_tuples']:,} (threshold: {table['calculated_threshold']:,.0f})")
+                    output.append(f"    Hours Since Last Autovacuum: {table['hours_since_last_autovacuum']:.1f}")
+                    output.append(f"    Autovacuum Count: {table['autovacuum_count']}")
+                    output.append("")
+        
+        # Vacuum Performance
+        vacuum_performance = result.get("vacuum_performance", {})
+        if vacuum_performance:
+            output.append("⚡ VACUUM PERFORMANCE")
+            output.append("-" * 30)
+            
+            stale_tables = vacuum_performance.get("stale_tables", [])
+            if stale_tables:
+                output.append(f"📅 Stale Tables ({len(stale_tables)}):")
+                for table in stale_tables[:5]:  # Show top 5
+                    output.append(f"  • {table['qualified_name']}")
+                    output.append(f"    Hours Since Last Vacuum: {table['hours_since_last_vacuum']:.1f}")
+                    output.append(f"    Size: {table['table_size_mb']:.1f} MB")
+                    output.append(f"    Total Modifications: {table['total_modifications']:,}")
+                    output.append("")
+            
+            high_mod_tables = vacuum_performance.get("high_modification_tables", [])
+            if high_mod_tables:
+                output.append(f"🔥 High Modification Tables ({len(high_mod_tables)}):")
+                for table in high_mod_tables[:5]:  # Show top 5
+                    output.append(f"  • {table['qualified_name']}")
+                    output.append(f"    Total Modifications: {table['total_modifications']:,}")
+                    output.append(f"    Vacuum Count: {table['vacuum_count']}")
+                    output.append(f"    Autovacuum Count: {table['autovacuum_count']}")
+                    output.append("")
+        
+        # Maintenance Recommendations
+        maintenance_recs = result.get("maintenance_recommendations", [])
+        if maintenance_recs:
+            output.append("🔧 MAINTENANCE RECOMMENDATIONS")
+            output.append("-" * 40)
+            
+            # Group by priority
+            critical_recs = [r for r in maintenance_recs if r['priority'] == 'CRITICAL']
+            high_recs = [r for r in maintenance_recs if r['priority'] == 'HIGH']
+            medium_recs = [r for r in maintenance_recs if r['priority'] == 'MEDIUM']
+            
+            if critical_recs:
+                output.append("🚨 CRITICAL PRIORITY:")
+                for rec in critical_recs:
+                    output.append(f"  • {rec['type']}: {rec['table']}")
+                    output.append(f"    Description: {rec['description']}")
+                    output.append(f"    Command: {rec['command']}")
+                    output.append(f"    Impact: {rec['estimated_impact']}")
+                    output.append("")
+            
+            if high_recs:
+                output.append("🔴 HIGH PRIORITY:")
+                for rec in high_recs:
+                    output.append(f"  • {rec['type']}: {rec['table']}")
+                    output.append(f"    Description: {rec['description']}")
+                    output.append(f"    Command: {rec['command']}")
+                    output.append(f"    Impact: {rec['estimated_impact']}")
+                    output.append("")
+            
+            if medium_recs:
+                output.append("🟡 MEDIUM PRIORITY:")
+                for rec in medium_recs:
+                    output.append(f"  • {rec['type']}: {rec['table']}")
+                    output.append(f"    Description: {rec['description']}")
+                    output.append(f"    Command: {rec['command']}")
+                    output.append(f"    Impact: {rec['estimated_impact']}")
+                    output.append("")
+        
+        # Configuration Recommendations
+        config_recs = result.get("configuration_recommendations", [])
+        if config_recs:
+            output.append("⚙️ CONFIGURATION RECOMMENDATIONS")
+            output.append("-" * 40)
+            
+            for i, rec in enumerate(config_recs, 1):
+                output.append(f"{i}. Parameter: {rec['parameter']}")
+                output.append(f"   Current Value: {rec['current_value']}")
+                output.append(f"   Recommended Value: {rec['recommended_value']}")
+                output.append(f"   Reason: {rec['reason']}")
+                output.append(f"   Impact: {rec['impact']}")
+                
+                if 'example_tables' in rec:
+                    output.append(f"   Example Tables: {', '.join(rec['example_tables'])}")
+                output.append("")
+        
+        # Summary recommendations
+        if not critical_issues and not maintenance_recs:
+            output.append("✅ OVERALL STATUS")
+            output.append("-" * 30)
+            output.append("• No critical vacuum issues detected")
+            output.append("• Autovacuum appears to be functioning normally")
+            output.append("• Continue regular monitoring")
+            output.append("")
+            
+            output.append("💡 GENERAL RECOMMENDATIONS")
+            output.append("-" * 30)
+            output.append("• Monitor dead tuple percentages regularly")
+            output.append("• Review autovacuum settings periodically")
+            output.append("• Consider manual vacuum during low-activity periods")
+            output.append("• Keep PostgreSQL statistics up to date")
+        
+        return "\n".join(output)

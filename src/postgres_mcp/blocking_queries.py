@@ -20,12 +20,12 @@ class BlockingQueriesAnalyzer:
     def __init__(self, sql_driver: SqlDriver):
         self.sql_driver = sql_driver
 
-    async def get_blocking_queries(self) -> Dict[str, Any]:
+    async def get_blocking_queries(self) -> str:
         """
         Get comprehensive blocking queries analysis using modern PostgreSQL features.
 
         Returns:
-            Dict containing blocking queries data, summary, and recommendations
+            String containing blocking queries data, summary, and recommendations
         """
         try:
             # Modern blocking queries query using pg_blocking_pids (PostgreSQL 9.6+)
@@ -105,13 +105,14 @@ class BlockingQueriesAnalyzer:
             rows = await self.sql_driver.execute_query(blocking_query)
 
             if not rows or len(rows) == 0:
-                return {
+                result = {
                     "status": "healthy",
                     "message": "No blocking queries found - all queries are running without locks.",
                     "blocking_queries": [],
                     "summary": {"total_blocked": 0, "total_blocking": 0, "max_wait_time": 0, "affected_relations": []},
                     "recommendations": [],
                 }
+                return self._format_as_text(result)
 
             # Process blocking queries data with improved structure
             blocking_data = []
@@ -183,7 +184,8 @@ class BlockingQueriesAnalyzer:
 
             recommendations = self._generate_recommendations(blocking_data, summary)
 
-            return {"status": "blocking_detected", "blocking_queries": blocking_data, "summary": summary, "recommendations": recommendations}
+            result = {"status": "blocking_detected", "blocking_queries": blocking_data, "summary": summary, "recommendations": recommendations}
+            return self._format_as_text(result)
         except Exception as e:
             logger.error(f"Error analyzing blocking queries: {e}")
             raise
@@ -313,3 +315,130 @@ class BlockingQueriesAnalyzer:
             recommendations.append("✅ Current blocking situation appears manageable. Monitor for patterns and trends.")
 
         return recommendations
+    
+    def _format_as_text(self, result: Dict[str, Any]) -> str:
+        """Format blocking queries analysis result as human-readable text."""
+        output = []
+        
+        # Header
+        output.append("🔒 BLOCKING QUERIES ANALYSIS")
+        output.append("=" * 50)
+        
+        status = result.get("status", "unknown")
+        summary = result.get("summary", {})
+        blocking_queries = result.get("blocking_queries", [])
+        recommendations = result.get("recommendations", [])
+        
+        # Status and Summary
+        if status == "healthy":
+            output.append("✅ STATUS: HEALTHY")
+            output.append(result.get("message", "No blocking queries detected"))
+            output.append("")
+        else:
+            output.append("⚠️ STATUS: BLOCKING DETECTED")
+            output.append("")
+            
+            # Summary statistics
+            output.append("📊 SUMMARY")
+            output.append("-" * 30)
+            output.append(f"Total Blocked Queries: {summary.get('total_blocked', 0)}")
+            output.append(f"Total Blocking Queries: {summary.get('total_blocking', 0)}")
+            output.append(f"Max Wait Time: {summary.get('max_wait_time_seconds', 0):.1f} seconds")
+            
+            affected_relations = summary.get("affected_relations", [])
+            if affected_relations:
+                output.append(f"Affected Relations: {', '.join(affected_relations)}")
+            
+            analysis_timestamp = summary.get("analysis_timestamp", "")
+            if analysis_timestamp:
+                output.append(f"Analysis Time: {analysis_timestamp}")
+            
+            output.append("")
+        
+        # Blocking queries details
+        if blocking_queries:
+            output.append("🚫 BLOCKING QUERIES DETAILS")
+            output.append("-" * 40)
+            
+            for i, block in enumerate(blocking_queries, 1):
+                blocked_proc = block.get("blocked_process", {})
+                blocking_proc = block.get("blocking_process", {})
+                lock_info = block.get("lock_info", {})
+                
+                output.append(f"\n{i}. BLOCKED QUERY:")
+                output.append(f"   PID: {blocked_proc.get('pid', 'N/A')}")
+                output.append(f"   User: {blocked_proc.get('user', 'N/A')}")
+                output.append(f"   Application: {blocked_proc.get('application', 'N/A')}")
+                output.append(f"   State: {blocked_proc.get('state', 'N/A')}")
+                output.append(f"   Wait Duration: {blocked_proc.get('duration_seconds', 0):.1f} seconds")
+                output.append(f"   Wait Event: {blocked_proc.get('wait_event', 'N/A')}")
+                output.append(f"   Wait Event Type: {blocked_proc.get('wait_event_type', 'N/A')}")
+                
+                # Query (truncated for readability)
+                query = blocked_proc.get('query', '')
+                if query:
+                    query_truncated = query[:100] + '...' if len(query) > 100 else query
+                    output.append(f"   Query: {query_truncated}")
+                
+                # Blocking process
+                if blocking_proc.get('pid'):
+                    output.append(f"\n   BLOCKING PROCESS:")
+                    output.append(f"   └─ PID: {blocking_proc.get('pid', 'N/A')}")
+                    output.append(f"   └─ User: {blocking_proc.get('user', 'N/A')}")
+                    output.append(f"   └─ Application: {blocking_proc.get('application', 'N/A')}")
+                    output.append(f"   └─ State: {blocking_proc.get('state', 'N/A')}")
+                    output.append(f"   └─ Duration: {blocking_proc.get('duration_seconds', 0):.1f} seconds")
+                    
+                    # Blocking query (truncated)
+                    blocking_query = blocking_proc.get('query', '')
+                    if blocking_query:
+                        blocking_query_truncated = blocking_query[:100] + '...' if len(blocking_query) > 100 else blocking_query
+                        output.append(f"   └─ Query: {blocking_query_truncated}")
+                
+                # Lock information
+                if lock_info:
+                    output.append(f"\n   LOCK INFORMATION:")
+                    if lock_info.get('types'):
+                        output.append(f"   └─ Lock Types: {lock_info.get('types', 'N/A')}")
+                    if lock_info.get('modes'):
+                        output.append(f"   └─ Lock Modes: {lock_info.get('modes', 'N/A')}")
+                    if lock_info.get('count'):
+                        output.append(f"   └─ Lock Count: {lock_info.get('count', 'N/A')}")
+                    if lock_info.get('affected_relations'):
+                        output.append(f"   └─ Affected Relations: {lock_info.get('affected_relations', 'N/A')}")
+                
+                # Blocking hierarchy
+                hierarchy = block.get("blocking_hierarchy", {})
+                all_blocking_pids = hierarchy.get("all_blocking_pids", [])
+                if all_blocking_pids and len(all_blocking_pids) > 1:
+                    output.append(f"\n   BLOCKING HIERARCHY:")
+                    output.append(f"   └─ All Blocking PIDs: {', '.join(map(str, all_blocking_pids))}")
+                    output.append(f"   └─ Immediate Blocker: {hierarchy.get('immediate_blocker', 'N/A')}")
+                
+                output.append("")
+        
+        # Recommendations
+        if recommendations:
+            output.append("💡 RECOMMENDATIONS")
+            output.append("-" * 30)
+            for i, rec in enumerate(recommendations, 1):
+                output.append(f"{i}. {rec}")
+            output.append("")
+        
+        # Additional analysis sections for healthy status
+        if status == "healthy":
+            output.append("📋 SYSTEM STATUS")
+            output.append("-" * 30)
+            output.append("• No blocking queries detected")
+            output.append("• All queries are running without lock contention")
+            output.append("• Database locking system is operating normally")
+            output.append("")
+            
+            output.append("🔍 MONITORING SUGGESTIONS")
+            output.append("-" * 30)
+            output.append("• Continue monitoring for lock contention patterns")
+            output.append("• Review query performance regularly")
+            output.append("• Consider enabling lock monitoring if not already active")
+            output.append("• Monitor for deadlocks in PostgreSQL logs")
+        
+        return "\n".join(output)

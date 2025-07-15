@@ -80,6 +80,162 @@ def format_text_response(text: Any) -> ResponseType:
     return [types.TextContent(type="text", text=str(text))]
 
 
+def format_schemas_as_text(schemas: list[dict]) -> str:
+    """Format schemas list as human-readable text."""
+    if not schemas:
+        return "No schemas found."
+    
+    output = []
+    output.append("📂 DATABASE SCHEMAS")
+    output.append("=" * 30)
+    
+    # Group by schema type
+    system_schemas = [s for s in schemas if s.get('schema_type') in ['System Schema', 'System Information Schema']]
+    user_schemas = [s for s in schemas if s.get('schema_type') == 'User Schema']
+    
+    if user_schemas:
+        output.append("\n👤 USER SCHEMAS")
+        output.append("-" * 20)
+        for schema in user_schemas:
+            output.append(f"• {schema['schema_name']} (Owner: {schema.get('schema_owner', 'N/A')})")
+    
+    if system_schemas:
+        output.append(f"\n🔧 SYSTEM SCHEMAS ({len(system_schemas)})")
+        output.append("-" * 20)
+        for schema in system_schemas[:10]:  # Show first 10 system schemas
+            output.append(f"• {schema['schema_name']} - {schema.get('schema_type', 'N/A')}")
+        if len(system_schemas) > 10:
+            output.append(f"... and {len(system_schemas) - 10} more system schemas")
+    
+    return "\n".join(output)
+
+
+def format_objects_as_text(objects: list[dict], object_type: str) -> str:
+    """Format objects list as human-readable text."""
+    if not objects:
+        return f"No {object_type}s found."
+    
+    output = []
+    output.append(f"📋 {object_type.upper()}S")
+    output.append("=" * 30)
+    
+    for obj in objects:
+        if object_type in ["table", "view"]:
+            output.append(f"• {obj['schema']}.{obj['name']} ({obj['type']})")
+        elif object_type == "sequence":
+            output.append(f"• {obj['schema']}.{obj['name']} ({obj['data_type']})")
+        elif object_type == "extension":
+            output.append(f"• {obj['name']} (v{obj['version']}) - Relocatable: {obj['relocatable']}")
+        else:
+            output.append(f"• {obj}")
+    
+    return "\n".join(output)
+
+
+def format_object_details_as_text(details: dict, object_type: str) -> str:
+    """Format object details as human-readable text."""
+    if not details:
+        return f"No details found for {object_type}."
+    
+    output = []
+    
+    if object_type in ["table", "view"]:
+        basic = details.get("basic", {})
+        output.append(f"📊 {object_type.upper()} DETAILS")
+        output.append("=" * 30)
+        output.append(f"Schema: {basic.get('schema', 'N/A')}")
+        output.append(f"Name: {basic.get('name', 'N/A')}")
+        output.append(f"Type: {basic.get('type', 'N/A')}")
+        
+        # Columns
+        columns = details.get("columns", [])
+        if columns:
+            output.append(f"\n📋 COLUMNS ({len(columns)})")
+            output.append("-" * 20)
+            for col in columns:
+                nullable = "NULL" if col.get("is_nullable") == "YES" else "NOT NULL"
+                default = f" DEFAULT {col.get('default')}" if col.get("default") else ""
+                output.append(f"• {col['column']} {col['data_type']} {nullable}{default}")
+        
+        # Constraints
+        constraints = details.get("constraints", [])
+        if constraints:
+            output.append(f"\n🔒 CONSTRAINTS ({len(constraints)})")
+            output.append("-" * 20)
+            for constraint in constraints:
+                columns_str = ", ".join(constraint.get("columns", []))
+                output.append(f"• {constraint['name']} ({constraint['type']}) on [{columns_str}]")
+        
+        # Indexes
+        indexes = details.get("indexes", [])
+        if indexes:
+            output.append(f"\n📇 INDEXES ({len(indexes)})")
+            output.append("-" * 20)
+            for idx in indexes:
+                output.append(f"• {idx['name']}")
+                output.append(f"  Definition: {idx['definition']}")
+    
+    elif object_type == "sequence":
+        output.append(f"🔢 SEQUENCE DETAILS")
+        output.append("=" * 30)
+        output.append(f"Schema: {details.get('schema', 'N/A')}")
+        output.append(f"Name: {details.get('name', 'N/A')}")
+        output.append(f"Data Type: {details.get('data_type', 'N/A')}")
+        output.append(f"Start Value: {details.get('start_value', 'N/A')}")
+        output.append(f"Increment: {details.get('increment', 'N/A')}")
+    
+    elif object_type == "extension":
+        output.append(f"🔌 EXTENSION DETAILS")
+        output.append("=" * 30)
+        output.append(f"Name: {details.get('name', 'N/A')}")
+        output.append(f"Version: {details.get('version', 'N/A')}")
+        output.append(f"Relocatable: {details.get('relocatable', 'N/A')}")
+    
+    return "\n".join(output)
+
+
+def format_query_results_as_text(results: list[dict]) -> str:
+    """Format SQL query results as human-readable text."""
+    if not results:
+        return "No results returned."
+    
+    output = []
+    output.append("📊 QUERY RESULTS")
+    output.append("=" * 30)
+    output.append(f"Rows returned: {len(results)}")
+    output.append("")
+    
+    if results:
+        # Get column names from the first row
+        columns = list(results[0].keys())
+        
+        # Show column headers
+        output.append("📋 COLUMNS:")
+        for col in columns:
+            output.append(f"• {col}")
+        output.append("")
+        
+        # Show first few rows
+        max_rows = min(10, len(results))
+        output.append(f"📄 DATA (showing first {max_rows} rows):")
+        output.append("-" * 30)
+        
+        for i, row in enumerate(results[:max_rows], 1):
+            output.append(f"Row {i}:")
+            for col, value in row.items():
+                # Truncate long values
+                str_value = str(value)
+                if len(str_value) > 100:
+                    str_value = str_value[:97] + "..."
+                output.append(f"  {col}: {str_value}")
+            output.append("")
+        
+        if len(results) > max_rows:
+            output.append(f"... and {len(results) - max_rows} more rows")
+    
+    return "\n".join(output)
+
+
 def format_error_response(error: str) -> ResponseType:
     """Format an error response."""
     return format_text_response(f"Error: {error}")
@@ -105,7 +261,7 @@ async def list_schemas() -> ResponseType:
             """
         )
         schemas = [row.cells for row in rows] if rows else []
-        return format_text_response(schemas)
+        return format_text_response(format_schemas_as_text(schemas))
     except Exception as e:
         logger.error(f"Error listing schemas: {e}")
         return format_error_response(str(e))
@@ -173,7 +329,7 @@ async def list_objects(
         else:
             return format_error_response(f"Unsupported object type: {object_type}")
 
-        return format_text_response(objects)
+        return format_text_response(format_objects_as_text(objects, object_type))
     except Exception as e:
         logger.error(f"Error listing objects: {e}")
         return format_error_response(str(e))
@@ -306,7 +462,7 @@ async def get_object_details(
         else:
             return format_error_response(f"Unsupported object type: {object_type}")
 
-        return format_text_response(result)
+        return format_text_response(format_object_details_as_text(result, object_type))
     except Exception as e:
         logger.error(f"Error getting object details: {e}")
         return format_error_response(str(e))
@@ -401,7 +557,8 @@ async def execute_sql(
         rows = await sql_driver.execute_query(sql)  # type: ignore
         if rows is None:
             return format_text_response("No results")
-        return format_text_response(list([r.cells for r in rows]))
+        results = [r.cells for r in rows]
+        return format_text_response(format_query_results_as_text(results))
     except Exception as e:
         logger.error(f"Error executing query: {e}")
         return format_error_response(str(e))

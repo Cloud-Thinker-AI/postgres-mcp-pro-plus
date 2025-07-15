@@ -42,14 +42,15 @@ class TextPresentation:
             max_index_size_mb: Maximum total size for recommended indexes in MB
 
         Returns:
-            Dict with recommendations or error
+            String with recommendations or error
         """
-        return await self._execute_analysis(
+        result = await self._execute_analysis(
             min_calls=50,
             min_avg_time_ms=5.0,
             limit=100,
             max_index_size_mb=max_index_size_mb,
         )
+        return self._format_as_text(result)
 
     async def analyze_queries(self, queries, max_index_size_mb=10000):
         """
@@ -63,18 +64,19 @@ class TextPresentation:
             max_index_size_mb: Maximum total size for recommended indexes in MB
 
         Returns:
-            Dict with recommendations or error
+            String with recommendations or error
         """
         if not queries:
-            return {"error": "No queries provided for analysis"}
+            return "❌ Error: No queries provided for analysis"
 
-        return await self._execute_analysis(
+        result = await self._execute_analysis(
             query_list=queries,
             min_calls=0,  # Ignore min calls for explicit query list
             min_avg_time_ms=0,  # Ignore min time for explicit query list
             limit=0,  # Ignore limit for explicit query list
             max_index_size_mb=max_index_size_mb,
         )
+        return self._format_as_text(result)
 
     async def analyze_single_query(self, query, max_index_size_mb=10000):
         """
@@ -88,15 +90,16 @@ class TextPresentation:
             max_index_size_mb: Maximum total size for recommended indexes in MB
 
         Returns:
-            Dict with recommendations or error
+            String with recommendations or error
         """
-        return await self._execute_analysis(
+        result = await self._execute_analysis(
             query_list=[query],
             min_calls=0,  # Ignore min calls for explicit query
             min_avg_time_ms=0,  # Ignore min time for explicit query
             limit=0,  # Ignore limit for explicit query
             max_index_size_mb=max_index_size_mb,
         )
+        return self._format_as_text(result)
 
     async def _execute_analysis(
         self,
@@ -264,3 +267,133 @@ class TextPresentation:
                 )
 
         return query_impact
+    
+    def _format_as_text(self, result: Dict[str, Any]) -> str:
+        """Format index tuning analysis result as human-readable text."""
+        if "error" in result:
+            return f"❌ Error: {result['error']}"
+        
+        output = []
+        
+        # Header
+        output.append("📊 INDEX TUNING ANALYSIS")
+        output.append("=" * 50)
+        
+        # Summary
+        summary = result.get("summary", {})
+        if summary:
+            output.append("📈 SUMMARY")
+            output.append("-" * 30)
+            output.append(f"Total Recommendations: {summary.get('total_recommendations', 0)}")
+            output.append(f"Base Cost: {summary.get('base_cost', 'N/A')}")
+            output.append(f"New Cost: {summary.get('new_cost', 'N/A')}")
+            output.append(f"Performance Improvement: {summary.get('improvement_multiple', 'N/A')}x")
+            output.append(f"Total Index Size: {summary.get('total_size_bytes', 'N/A')}")
+            output.append("")
+        
+        # Recommendations
+        recommendations = result.get("recommendations", [])
+        if recommendations:
+            output.append("🎯 INDEX RECOMMENDATIONS")
+            output.append("-" * 40)
+            
+            for i, rec in enumerate(recommendations, 1):
+                output.append(f"{i}. INDEX ON {rec.get('index_target_table', 'unknown_table')}")
+                output.append(f"   Columns: {', '.join(rec.get('index_target_columns', []))}")
+                output.append(f"   Definition: {rec.get('index_definition', 'N/A')}")
+                output.append(f"   Estimated Size: {rec.get('index_estimated_size', 'N/A')}")
+                output.append(f"   Apply Order: {rec.get('index_apply_order', 'N/A')}")
+                
+                # Individual benefit
+                individual_benefit = rec.get("benefit_of_this_index_only", {})
+                if individual_benefit:
+                    output.append(f"   Individual Benefit:")
+                    output.append(f"     • Improvement: {individual_benefit.get('improvement_multiple', 'N/A')}x")
+                    output.append(f"     • Base Cost: {individual_benefit.get('base_cost', 'N/A')}")
+                    output.append(f"     • New Cost: {individual_benefit.get('new_cost', 'N/A')}")
+                
+                # Progressive benefit
+                progressive_benefit = rec.get("benefit_after_previous_indexes", {})
+                if progressive_benefit:
+                    output.append(f"   Progressive Benefit (after previous indexes):")
+                    output.append(f"     • Improvement: {progressive_benefit.get('improvement_multiple', 'N/A')}x")
+                    output.append(f"     • Base Cost: {progressive_benefit.get('base_cost', 'N/A')}")
+                    output.append(f"     • New Cost: {progressive_benefit.get('new_cost', 'N/A')}")
+                
+                # Warnings
+                if "warning" in rec:
+                    output.append(f"   ⚠️  Warning: {rec['warning']}")
+                
+                output.append("")
+        
+        # Query Impact
+        query_impact = result.get("query_impact", [])
+        if query_impact:
+            output.append("🔍 QUERY IMPACT ANALYSIS")
+            output.append("-" * 40)
+            
+            for i, impact in enumerate(query_impact, 1):
+                output.append(f"{i}. QUERY ANALYSIS")
+                output.append(f"   Performance Improvement: {impact.get('improvement_multiple', 'N/A')}x")
+                output.append(f"   Base Cost: {impact.get('base_cost', 'N/A')}")
+                output.append(f"   New Cost: {impact.get('new_cost', 'N/A')}")
+                
+                # Query (truncated for readability)
+                query = impact.get('query', '')
+                if query:
+                    query_lines = query.strip().split('\n')
+                    if len(query_lines) > 3:
+                        query_preview = '\n'.join(query_lines[:3]) + '\n...'
+                    else:
+                        query_preview = query
+                    output.append(f"   Query Preview:")
+                    output.append(f"   ```sql")
+                    output.append(f"   {query_preview}")
+                    output.append(f"   ```")
+                
+                # Explain plan diff (if available)
+                if impact.get('explain_plan_diff'):
+                    output.append(f"   Explain Plan Difference:")
+                    output.append(f"   {impact['explain_plan_diff']}")
+                
+                output.append("")
+        
+        # No recommendations case
+        if not recommendations:
+            if "recommendations" in result and result["recommendations"] == "No index recommendations found.":
+                output.append("ℹ️ ANALYSIS RESULT")
+                output.append("-" * 30)
+                output.append("No index recommendations found.")
+                output.append("")
+                output.append("This could mean:")
+                output.append("• Your queries are already well-optimized")
+                output.append("• Existing indexes are sufficient")
+                output.append("• Query patterns don't benefit from additional indexes")
+                output.append("• No queries met the minimum criteria for analysis")
+                output.append("")
+                output.append("💡 SUGGESTIONS")
+                output.append("-" * 30)
+                output.append("• Review your query patterns and frequency")
+                output.append("• Consider lowering analysis thresholds")
+                output.append("• Check if pg_stat_statements is enabled and has data")
+                output.append("• Analyze specific problematic queries individually")
+        
+        # Performance Tips
+        if recommendations:
+            output.append("💡 IMPLEMENTATION TIPS")
+            output.append("-" * 30)
+            output.append("• Apply indexes in the recommended order")
+            output.append("• Test indexes on a staging environment first")
+            output.append("• Monitor index usage after creation")
+            output.append("• Consider maintenance windows for large indexes")
+            output.append("• Use CONCURRENTLY option for minimal downtime")
+            output.append("")
+            
+            output.append("📋 EXAMPLE IMPLEMENTATION")
+            output.append("-" * 30)
+            for i, rec in enumerate(recommendations[:3], 1):  # Show first 3 examples
+                output.append(f"{i}. {rec.get('index_definition', 'N/A')}")
+            if len(recommendations) > 3:
+                output.append(f"   ... and {len(recommendations) - 3} more indexes")
+        
+        return "\n".join(output)
