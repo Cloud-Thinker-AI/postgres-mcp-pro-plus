@@ -84,21 +84,21 @@ def format_schemas_as_text(schemas: list[dict]) -> str:
     """Format schemas list as human-readable text."""
     if not schemas:
         return "No schemas found."
-    
+
     output = []
     output.append("📂 DATABASE SCHEMAS")
     output.append("=" * 30)
-    
+
     # Group by schema type
-    system_schemas = [s for s in schemas if s.get('schema_type') in ['System Schema', 'System Information Schema']]
-    user_schemas = [s for s in schemas if s.get('schema_type') == 'User Schema']
-    
+    system_schemas = [s for s in schemas if s.get("schema_type") in ["System Schema", "System Information Schema"]]
+    user_schemas = [s for s in schemas if s.get("schema_type") == "User Schema"]
+
     if user_schemas:
         output.append("\n👤 USER SCHEMAS")
         output.append("-" * 20)
         for schema in user_schemas:
             output.append(f"• {schema['schema_name']} (Owner: {schema.get('schema_owner', 'N/A')})")
-    
+
     if system_schemas:
         output.append(f"\n🔧 SYSTEM SCHEMAS ({len(system_schemas)})")
         output.append("-" * 20)
@@ -106,7 +106,7 @@ def format_schemas_as_text(schemas: list[dict]) -> str:
             output.append(f"• {schema['schema_name']} - {schema.get('schema_type', 'N/A')}")
         if len(system_schemas) > 10:
             output.append(f"... and {len(system_schemas) - 10} more system schemas")
-    
+
     return "\n".join(output)
 
 
@@ -114,11 +114,11 @@ def format_objects_as_text(objects: list[dict], object_type: str) -> str:
     """Format objects list as human-readable text."""
     if not objects:
         return f"No {object_type}s found."
-    
+
     output = []
     output.append(f"📋 {object_type.upper()}S")
     output.append("=" * 30)
-    
+
     for obj in objects:
         if object_type in ["table", "view"]:
             output.append(f"• {obj['schema']}.{obj['name']} ({obj['type']})")
@@ -128,7 +128,7 @@ def format_objects_as_text(objects: list[dict], object_type: str) -> str:
             output.append(f"• {obj['name']} (v{obj['version']}) - Relocatable: {obj['relocatable']}")
         else:
             output.append(f"• {obj}")
-    
+
     return "\n".join(output)
 
 
@@ -136,9 +136,9 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
     """Format object details as human-readable text."""
     if not details:
         return f"No details found for {object_type}."
-    
+
     output = []
-    
+
     if object_type in ["table", "view"]:
         basic = details.get("basic", {})
         output.append(f"📊 {object_type.upper()} DETAILS")
@@ -146,7 +146,7 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
         output.append(f"Schema: {basic.get('schema', 'N/A')}")
         output.append(f"Name: {basic.get('name', 'N/A')}")
         output.append(f"Type: {basic.get('type', 'N/A')}")
-        
+
         # Columns
         columns = details.get("columns", [])
         if columns:
@@ -156,7 +156,7 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
                 nullable = "NULL" if col.get("is_nullable") == "YES" else "NOT NULL"
                 default = f" DEFAULT {col.get('default')}" if col.get("default") else ""
                 output.append(f"• {col['column']} {col['data_type']} {nullable}{default}")
-        
+
         # Constraints
         constraints = details.get("constraints", [])
         if constraints:
@@ -165,7 +165,7 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
             for constraint in constraints:
                 columns_str = ", ".join(constraint.get("columns", []))
                 output.append(f"• {constraint['name']} ({constraint['type']}) on [{columns_str}]")
-        
+
         # Indexes
         indexes = details.get("indexes", [])
         if indexes:
@@ -174,7 +174,7 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
             for idx in indexes:
                 output.append(f"• {idx['name']}")
                 output.append(f"  Definition: {idx['definition']}")
-    
+
     elif object_type == "sequence":
         output.append(f"🔢 SEQUENCE DETAILS")
         output.append("=" * 30)
@@ -183,14 +183,14 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
         output.append(f"Data Type: {details.get('data_type', 'N/A')}")
         output.append(f"Start Value: {details.get('start_value', 'N/A')}")
         output.append(f"Increment: {details.get('increment', 'N/A')}")
-    
+
     elif object_type == "extension":
         output.append(f"🔌 EXTENSION DETAILS")
         output.append("=" * 30)
         output.append(f"Name: {details.get('name', 'N/A')}")
         output.append(f"Version: {details.get('version', 'N/A')}")
         output.append(f"Relocatable: {details.get('relocatable', 'N/A')}")
-    
+
     return "\n".join(output)
 
 
@@ -198,28 +198,28 @@ def format_query_results_as_text(results: list[dict]) -> str:
     """Format SQL query results as human-readable text."""
     if not results:
         return "No results returned."
-    
+
     output = []
     output.append("📊 QUERY RESULTS")
     output.append("=" * 30)
     output.append(f"Rows returned: {len(results)}")
     output.append("")
-    
+
     if results:
         # Get column names from the first row
         columns = list(results[0].keys())
-        
+
         # Show column headers
         output.append("📋 COLUMNS:")
         for col in columns:
             output.append(f"• {col}")
         output.append("")
-        
+
         # Show first few rows
         max_rows = min(10, len(results))
         output.append(f"📄 DATA (showing first {max_rows} rows):")
         output.append("-" * 30)
-        
+
         for i, row in enumerate(results[:max_rows], 1):
             output.append(f"Row {i}:")
             for col, value in row.items():
@@ -229,10 +229,10 @@ def format_query_results_as_text(results: list[dict]) -> str:
                     str_value = str_value[:97] + "..."
                 output.append(f"  {col}: {str_value}")
             output.append("")
-        
+
         if len(results) > max_rows:
             output.append(f"... and {len(results) - max_rows} more rows")
-    
+
     return "\n".join(output)
 
 
@@ -289,7 +289,14 @@ async def list_objects(
                 [schema_name, table_type],
             )
             objects = (
-                [{"schema": row.cells["table_schema"], "name": row.cells["table_name"], "type": row.cells["table_type"]} for row in rows]
+                [
+                    {
+                        "schema": row.cells["table_schema"],
+                        "name": row.cells["table_name"],
+                        "type": row.cells["table_type"],
+                    }
+                    for row in rows
+                ]
                 if rows
                 else []
             )
@@ -306,7 +313,14 @@ async def list_objects(
                 [schema_name],
             )
             objects = (
-                [{"schema": row.cells["sequence_schema"], "name": row.cells["sequence_name"], "data_type": row.cells["data_type"]} for row in rows]
+                [
+                    {
+                        "schema": row.cells["sequence_schema"],
+                        "name": row.cells["sequence_name"],
+                        "data_type": row.cells["data_type"],
+                    }
+                    for row in rows
+                ]
                 if rows
                 else []
             )
@@ -321,7 +335,14 @@ async def list_objects(
                 """
             )
             objects = (
-                [{"name": row.cells["extname"], "version": row.cells["extversion"], "relocatable": row.cells["extrelocatable"]} for row in rows]
+                [
+                    {
+                        "name": row.cells["extname"],
+                        "version": row.cells["extversion"],
+                        "relocatable": row.cells["extrelocatable"],
+                    }
+                    for row in rows
+                ]
                 if rows
                 else []
             )
@@ -410,7 +431,11 @@ async def get_object_details(
                 [schema_name, object_name],
             )
 
-            indexes = [{"name": r.cells["indexname"], "definition": r.cells["indexdef"]} for r in idx_rows] if idx_rows else []
+            indexes = (
+                [{"name": r.cells["indexname"], "definition": r.cells["indexdef"]} for r in idx_rows]
+                if idx_rows
+                else []
+            )
 
             result = {
                 "basic": {"schema": schema_name, "name": object_name, "type": object_type},
@@ -455,7 +480,11 @@ async def get_object_details(
 
             if rows and rows[0]:
                 row = rows[0]
-                result = {"name": row.cells["extname"], "version": row.cells["extversion"], "relocatable": row.cells["extrelocatable"]}
+                result = {
+                    "name": row.cells["extname"],
+                    "version": row.cells["extversion"],
+                    "relocatable": row.cells["extrelocatable"],
+                }
             else:
                 result = {}
 
@@ -468,7 +497,9 @@ async def get_object_details(
         return format_error_response(str(e))
 
 
-@mcp.tool(description="Explains the execution plan for a SQL query, showing how the database will execute it and provides detailed cost estimates.")
+@mcp.tool(
+    description="Explains the execution plan for a SQL query, showing how the database will execute it and provides detailed cost estimates."
+)
 async def explain_query(
     sql: str = Field(description="SQL query to explain"),
     analyze: bool = Field(
@@ -596,7 +627,9 @@ async def analyze_query_indexes(
     if len(queries) == 0:
         return format_error_response("Please provide a non-empty list of queries to analyze.")
     if len(queries) > MAX_NUM_INDEX_TUNING_QUERIES:
-        return format_error_response(f"Please provide a list of up to {MAX_NUM_INDEX_TUNING_QUERIES} queries to analyze.")
+        return format_error_response(
+            f"Please provide a list of up to {MAX_NUM_INDEX_TUNING_QUERIES} queries to analyze."
+        )
 
     try:
         sql_driver = await get_sql_driver()
@@ -651,7 +684,9 @@ async def get_top_queries(
         "for resource-intensive queries",
         default="resources",
     ),
-    limit: int = Field(description="Number of queries to return when ranking based on mean_time or total_time", default=10),
+    limit: int = Field(
+        description="Number of queries to return when ranking based on mean_time or total_time", default=10
+    ),
 ) -> ResponseType:
     try:
         sql_driver = await get_sql_driver()
@@ -662,9 +697,13 @@ async def get_top_queries(
             return format_text_response(result)
         elif sort_by == "mean_time" or sort_by == "total_time":
             # Map the sort_by values to what get_top_queries_by_time expects
-            result = await top_queries_tool.get_top_queries_by_time(limit=limit, sort_by="mean" if sort_by == "mean_time" else "total")
+            result = await top_queries_tool.get_top_queries_by_time(
+                limit=limit, sort_by="mean" if sort_by == "mean_time" else "total"
+            )
         else:
-            return format_error_response("Invalid sort criteria. Please use 'resources' or 'mean_time' or 'total_time'.")
+            return format_error_response(
+                "Invalid sort criteria. Please use 'resources' or 'mean_time' or 'total_time'."
+            )
         return format_text_response(result)
     except Exception as e:
         logger.error(f"Error getting slow queries: {e}")
@@ -718,7 +757,9 @@ async def analyze_schema_relationships() -> ResponseType:
         return format_error_response(str(e))
 
 
-@mcp.tool(description="Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations")
+@mcp.tool(
+    description="Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations"
+)
 async def get_blocking_queries() -> ResponseType:
     """Get comprehensive information about blocking queries and locks in the database with analysis and recommendations."""
     try:
@@ -746,6 +787,7 @@ async def analyze_vacuum_requirements() -> ResponseType:
     except Exception as e:
         logger.error(f"Error analyzing vacuum requirements: {e}")
         return format_error_response(str(e))
+
 
 async def main():
     # Parse command line arguments

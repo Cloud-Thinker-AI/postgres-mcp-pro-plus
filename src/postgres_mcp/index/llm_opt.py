@@ -71,7 +71,9 @@ class LLMOptimizerTool(IndexTuningBase):
         return math.log(execution_cost) + self.pareto_alpha * math.log(index_size)
 
     @override
-    async def _generate_recommendations(self, query_weights: list[tuple[str, SelectStmt, float]]) -> tuple[set[IndexRecommendation], float]:
+    async def _generate_recommendations(
+        self, query_weights: list[tuple[str, SelectStmt, float]]
+    ) -> tuple[set[IndexRecommendation], float]:
         """Generate index tuning queries using optimization by LLM."""
         # For now we support only one table at a time
         if len(query_weights) > 1:
@@ -142,7 +144,9 @@ class LLMOptimizerTool(IndexTuningBase):
                 history_prompt = "\nPrevious attempts and their costs:\n"
                 for attempt in attempt_history:
                     indexes_str = ";".join(idx.to_index_definition().definition for idx in attempt.indexes)
-                    history_prompt += f"- Indexes: {indexes_str}, Cost: {attempt.execution_cost}, Index Size: {attempt.index_size}, "
+                    history_prompt += (
+                        f"- Indexes: {indexes_str}, Cost: {attempt.execution_cost}, Index Size: {attempt.index_size}, "
+                    )
                     history_prompt += f"Objective Score: {attempt.objective_score}\n"
 
             if no_progress_count > 0:
@@ -157,7 +161,10 @@ class LLMOptimizerTool(IndexTuningBase):
                 response_model=IndexingAlternative,
                 temperature=1.2,
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that generates index recommendations for a given workload."},
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that generates index recommendations for a given workload.",
+                    },
                     {
                         "role": "user",
                         "content": f"Here is the query we are optimizing: {query}\n"
@@ -186,7 +193,9 @@ class LLMOptimizerTool(IndexTuningBase):
             found_improvement = False
             for i, index_set in enumerate(index_alternatives):
                 try:
-                    logger.info("Evaluating alternative %d/%d with %d indexes", i + 1, len(index_alternatives), len(index_set))
+                    logger.info(
+                        "Evaluating alternative %d/%d with %d indexes", i + 1, len(index_alternatives), len(index_set)
+                    )
                     # Evaluate this index configuration
                     execution_cost_estimate = await self._evaluate_configuration_cost(
                         query_weights, frozenset({index.to_index_definition() for index in index_set})
@@ -199,11 +208,15 @@ class LLMOptimizerTool(IndexTuningBase):
                     )
 
                     # Estimate the size of the indexes
-                    index_size_estimate = await self._estimate_index_size_2({index.to_index_definition() for index in index_set}, 1024 * 1024)
+                    index_size_estimate = await self._estimate_index_size_2(
+                        {index.to_index_definition() for index in index_set}, 1024 * 1024
+                    )
                     logger.info("Estimated index size: %f", index_size_estimate)
 
                     # Score based on a balance of size and performance
-                    score = math.log(execution_cost_estimate) + self.pareto_alpha * math.log(total_table_size + index_size_estimate)
+                    score = math.log(execution_cost_estimate) + self.pareto_alpha * math.log(
+                        total_table_size + index_size_estimate
+                    )
 
                     # Record this attempt in history
                     latest_config = ScoredIndexes(
@@ -233,7 +246,9 @@ class LLMOptimizerTool(IndexTuningBase):
             else:
                 no_progress_count += 1
                 logger.info(
-                    "No improvement found in this iteration. Attempts without progress: %d/%d", no_progress_count, self.max_no_progress_attempts
+                    "No improvement found in this iteration. Attempts without progress: %d/%d",
+                    no_progress_count,
+                    self.max_no_progress_attempts,
                 )
 
         if best_config != original_config:
@@ -250,7 +265,9 @@ class LLMOptimizerTool(IndexTuningBase):
         best_index_config_set = {index.to_index_recommendation() for index in best_config.indexes}
         return (best_index_config_set, best_config.execution_cost)
 
-    async def _estimate_index_size_2(self, index_set: set[IndexDefinition], min_size_penalty: float = 1024 * 1024) -> float:
+    async def _estimate_index_size_2(
+        self, index_set: set[IndexDefinition], min_size_penalty: float = 1024 * 1024
+    ) -> float:
         """
         Estimate the size of a set of indexes using hypopg.
 

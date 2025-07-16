@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SchemaNode:
     """Represents a schema node in the dependency graph."""
+
     name: str
     table_count: int = 0
     total_size_bytes: int = 0
@@ -40,6 +41,7 @@ class SchemaNode:
 @dataclass
 class TableNode:
     """Represents a table node in the dependency graph."""
+
     schema: str
     name: str
     qualified_name: str
@@ -108,9 +110,9 @@ class SchemaMappingTool:
             # Get schema statistics
             schema_stats = await self._get_schema_statistics(schema)
             schema_node = self.schema_nodes[schema]
-            schema_node.table_count = schema_stats['table_count']
-            schema_node.total_size_bytes = schema_stats['total_size_bytes']
-            schema_node.total_rows = schema_stats['total_rows']
+            schema_node.table_count = schema_stats["table_count"]
+            schema_node.total_size_bytes = schema_stats["total_size_bytes"]
+            schema_node.total_rows = schema_stats["total_rows"]
 
             # Get tables in schema
             tables = await self._get_tables_in_schema(schema)
@@ -136,8 +138,8 @@ class SchemaMappingTool:
                 schema=schema,
                 name=table,
                 qualified_name=qualified_name,
-                size_bytes=table_stats.get('size_bytes', 0),
-                row_count=table_stats.get('row_count', 0)
+                size_bytes=table_stats.get("size_bytes", 0),
+                row_count=table_stats.get("row_count", 0),
             )
 
             # Get foreign key relationships
@@ -149,9 +151,9 @@ class SchemaMappingTool:
                 table_node.outgoing_fks.append(target_qualified)
 
                 # Update schema-level relationships
-                if fk['to_schema'] != schema:
-                    self.schema_nodes[schema].outgoing_references.add(fk['to_schema'])
-                    self.schema_nodes[fk['to_schema']].incoming_references.add(schema)
+                if fk["to_schema"] != schema:
+                    self.schema_nodes[schema].outgoing_references.add(fk["to_schema"])
+                    self.schema_nodes[fk["to_schema"]].incoming_references.add(schema)
                 else:
                     self.schema_nodes[schema].self_references += 1
 
@@ -177,13 +179,15 @@ class SchemaMappingTool:
                         target_node = self.table_nodes[target_table]
 
                         relationship = {
-                            'from_schema': table_node.schema,
-                            'from_table': table_node.name,
-                            'to_schema': target_node.schema,
-                            'to_table': target_node.name,
-                            'from_qualified': table_name,
-                            'to_qualified': target_table,
-                            'relationship_type': 'cross_schema' if table_node.schema != target_node.schema else 'intra_schema'
+                            "from_schema": table_node.schema,
+                            "from_table": table_node.name,
+                            "to_schema": target_node.schema,
+                            "to_table": target_node.name,
+                            "from_qualified": table_name,
+                            "to_qualified": target_table,
+                            "relationship_type": "cross_schema"
+                            if table_node.schema != target_node.schema
+                            else "intra_schema",
                         }
 
                         if table_node.schema != target_node.schema:
@@ -214,17 +218,17 @@ class SchemaMappingTool:
             recommendations = self._generate_recommendations()
 
             return {
-                'schema_analysis': schema_analysis,
-                'table_analysis': table_analysis,
-                'relationship_patterns': relationship_patterns,
-                'visual_representation': visual_data,
-                'recommendations': recommendations,
-                'summary': {
-                    'total_schemas': len(self.schema_nodes),
-                    'total_tables': len(self.table_nodes),
-                    'cross_schema_relationships': len(self.cross_schema_relationships),
-                    'intra_schema_relationships': len(self.intra_schema_relationships)
-                }
+                "schema_analysis": schema_analysis,
+                "table_analysis": table_analysis,
+                "relationship_patterns": relationship_patterns,
+                "visual_representation": visual_data,
+                "recommendations": recommendations,
+                "summary": {
+                    "total_schemas": len(self.schema_nodes),
+                    "total_tables": len(self.table_nodes),
+                    "cross_schema_relationships": len(self.cross_schema_relationships),
+                    "intra_schema_relationships": len(self.intra_schema_relationships),
+                },
             }
 
         except Exception as e:
@@ -237,27 +241,27 @@ class SchemaMappingTool:
 
         for schema_name, schema_node in self.schema_nodes.items():
             metrics = {
-                'schema': schema_name,
-                'table_count': schema_node.table_count,
-                'total_size_bytes': schema_node.total_size_bytes,
-                'total_rows': schema_node.total_rows,
-                'outgoing_dependencies': list(schema_node.outgoing_references),
-                'incoming_dependencies': list(schema_node.incoming_references),
-                'self_references': schema_node.self_references,
-                'dependency_score': schema_node.dependency_score,
-                'isolation_score': schema_node.isolation_score,
-                'is_isolated': schema_node.isolation_score == 0
+                "schema": schema_name,
+                "table_count": schema_node.table_count,
+                "total_size_bytes": schema_node.total_size_bytes,
+                "total_rows": schema_node.total_rows,
+                "outgoing_dependencies": list(schema_node.outgoing_references),
+                "incoming_dependencies": list(schema_node.incoming_references),
+                "self_references": schema_node.self_references,
+                "dependency_score": schema_node.dependency_score,
+                "isolation_score": schema_node.isolation_score,
+                "is_isolated": schema_node.isolation_score == 0,
             }
             schema_metrics.append(metrics)
 
         # Sort by dependency score
-        schema_metrics.sort(key=lambda x: x['dependency_score'], reverse=True)
+        schema_metrics.sort(key=lambda x: x["dependency_score"], reverse=True)
 
         return {
-            'schema_metrics': schema_metrics,
-            'most_dependent': schema_metrics[0] if schema_metrics else None,
-            'most_isolated': min(schema_metrics, key=lambda x: x['isolation_score']) if schema_metrics else None,
-            'dependency_chains': self._find_dependency_chains()
+            "schema_metrics": schema_metrics,
+            "most_dependent": schema_metrics[0] if schema_metrics else None,
+            "most_isolated": min(schema_metrics, key=lambda x: x["isolation_score"]) if schema_metrics else None,
+            "dependency_chains": self._find_dependency_chains(),
         }
 
     def _analyze_table_dependencies(self) -> dict[str, Any]:
@@ -268,16 +272,16 @@ class SchemaMappingTool:
 
         for table_name, table_node in self.table_nodes.items():
             metrics = {
-                'qualified_name': table_name,
-                'schema': table_node.schema,
-                'table': table_node.name,
-                'size_bytes': table_node.size_bytes,
-                'row_count': table_node.row_count,
-                'outgoing_fks': len(table_node.outgoing_fks),
-                'incoming_fks': len(table_node.incoming_fks),
-                'connection_count': table_node.connection_count,
-                'is_hub': table_node.is_hub,
-                'is_isolated': table_node.is_isolated
+                "qualified_name": table_name,
+                "schema": table_node.schema,
+                "table": table_node.name,
+                "size_bytes": table_node.size_bytes,
+                "row_count": table_node.row_count,
+                "outgoing_fks": len(table_node.outgoing_fks),
+                "incoming_fks": len(table_node.incoming_fks),
+                "connection_count": table_node.connection_count,
+                "is_hub": table_node.is_hub,
+                "is_isolated": table_node.is_isolated,
             }
             table_metrics.append(metrics)
 
@@ -288,21 +292,21 @@ class SchemaMappingTool:
                 isolated_tables.append(metrics)
 
         # Sort by connection count
-        table_metrics.sort(key=lambda x: x['connection_count'], reverse=True)
+        table_metrics.sort(key=lambda x: x["connection_count"], reverse=True)
 
         return {
-            'table_metrics': table_metrics,
-            'hub_tables': sorted(hub_tables, key=lambda x: x['incoming_fks'], reverse=True),
-            'isolated_tables': sorted(isolated_tables, key=lambda x: x['size_bytes'], reverse=True),
-            'most_connected': table_metrics[0] if table_metrics else None
+            "table_metrics": table_metrics,
+            "hub_tables": sorted(hub_tables, key=lambda x: x["incoming_fks"], reverse=True),
+            "isolated_tables": sorted(isolated_tables, key=lambda x: x["size_bytes"], reverse=True),
+            "most_connected": table_metrics[0] if table_metrics else None,
         }
 
     def _analyze_relationship_patterns(self) -> dict[str, Any]:
         """Analyze relationship patterns and identify common structures."""
         patterns = {
-            'cross_schema_count': len(self.cross_schema_relationships),
-            'intra_schema_count': len(self.intra_schema_relationships),
-            'total_relationships': len(self.cross_schema_relationships) + len(self.intra_schema_relationships)
+            "cross_schema_count": len(self.cross_schema_relationships),
+            "intra_schema_count": len(self.intra_schema_relationships),
+            "total_relationships": len(self.cross_schema_relationships) + len(self.intra_schema_relationships),
         }
 
         # Analyze cross-schema patterns
@@ -311,8 +315,10 @@ class SchemaMappingTool:
             pattern = f"{rel['from_schema']} -> {rel['to_schema']}"
             cross_schema_patterns[pattern] += 1
 
-        patterns['cross_schema_patterns'] = dict(cross_schema_patterns)
-        patterns['most_common_cross_schema'] = max(cross_schema_patterns.items(), key=lambda x: x[1]) if cross_schema_patterns else None
+        patterns["cross_schema_patterns"] = dict(cross_schema_patterns)
+        patterns["most_common_cross_schema"] = (
+            max(cross_schema_patterns.items(), key=lambda x: x[1]) if cross_schema_patterns else None
+        )
 
         # Analyze schema coupling
         schema_coupling = {}
@@ -320,12 +326,12 @@ class SchemaMappingTool:
             total_external_refs = len(schema_node.outgoing_references) + len(schema_node.incoming_references)
             coupling_ratio = total_external_refs / max(schema_node.table_count, 1)
             schema_coupling[schema_name] = {
-                'external_references': total_external_refs,
-                'coupling_ratio': coupling_ratio,
-                'coupling_level': self._categorize_coupling(coupling_ratio)
+                "external_references": total_external_refs,
+                "coupling_ratio": coupling_ratio,
+                "coupling_level": self._categorize_coupling(coupling_ratio),
             }
 
-        patterns['schema_coupling'] = schema_coupling
+        patterns["schema_coupling"] = schema_coupling
 
         return patterns
 
@@ -337,14 +343,14 @@ class SchemaMappingTool:
         # Schema nodes
         for schema_name, schema_node in self.schema_nodes.items():
             node = {
-                'id': schema_name,
-                'type': 'schema',
-                'label': schema_name,
-                'size': schema_node.total_size_bytes,
-                'table_count': schema_node.table_count,
-                'dependency_score': schema_node.dependency_score,
-                'isolation_score': schema_node.isolation_score,
-                'color': self._get_node_color(schema_node)
+                "id": schema_name,
+                "type": "schema",
+                "label": schema_name,
+                "size": schema_node.total_size_bytes,
+                "table_count": schema_node.table_count,
+                "dependency_score": schema_node.dependency_score,
+                "isolation_score": schema_node.isolation_score,
+                "color": self._get_node_color(schema_node),
             }
             nodes.append(node)
 
@@ -355,12 +361,12 @@ class SchemaMappingTool:
         # Cross-schema relationships
         for rel in self.cross_schema_relationships:
             edge = {
-                'id': f"edge_{edge_id}",
-                'source': rel['from_schema'],
-                'target': rel['to_schema'],
-                'type': 'cross_schema',
-                'label': f"{rel['from_table']} -> {rel['to_table']}",
-                'weight': 1
+                "id": f"edge_{edge_id}",
+                "source": rel["from_schema"],
+                "target": rel["to_schema"],
+                "type": "cross_schema",
+                "label": f"{rel['from_table']} -> {rel['to_table']}",
+                "weight": 1,
             }
             edges.append(edge)
             edge_id += 1
@@ -369,14 +375,14 @@ class SchemaMappingTool:
         layout_data = self._generate_layout_suggestions()
 
         return {
-            'nodes': nodes,
-            'edges': edges,
-            'layout': layout_data,
-            'metrics': {
-                'total_nodes': len(nodes),
-                'total_edges': len(edges),
-                'density': len(edges) / (len(nodes) * (len(nodes) - 1)) if len(nodes) > 1 else 0
-            }
+            "nodes": nodes,
+            "edges": edges,
+            "layout": layout_data,
+            "metrics": {
+                "total_nodes": len(nodes),
+                "total_edges": len(edges),
+                "density": len(edges) / (len(nodes) * (len(nodes) - 1)) if len(nodes) > 1 else 0,
+            },
         }
 
     def _generate_recommendations(self) -> list[dict[str, Any]]:
@@ -386,38 +392,44 @@ class SchemaMappingTool:
         # High coupling warnings
         for schema_name, schema_node in self.schema_nodes.items():
             if len(schema_node.outgoing_references) > 3:
-                recommendations.append({
-                    'type': 'warning',
-                    'category': 'high_coupling',
-                    'schema': schema_name,
-                    'message': f"Schema '{schema_name}' has high coupling with {len(schema_node.outgoing_references)} external dependencies",
-                    'impact': 'high',
-                    'suggestion': 'Consider consolidating related tables or reducing cross-schema dependencies'
-                })
+                recommendations.append(
+                    {
+                        "type": "warning",
+                        "category": "high_coupling",
+                        "schema": schema_name,
+                        "message": f"Schema '{schema_name}' has high coupling with {len(schema_node.outgoing_references)} external dependencies",
+                        "impact": "high",
+                        "suggestion": "Consider consolidating related tables or reducing cross-schema dependencies",
+                    }
+                )
 
         # Isolated schema notifications
         for schema_name, schema_node in self.schema_nodes.items():
             if schema_node.isolation_score == 0 and schema_node.table_count > 5:
-                recommendations.append({
-                    'type': 'info',
-                    'category': 'isolation',
-                    'schema': schema_name,
-                    'message': f"Schema '{schema_name}' is completely isolated with {schema_node.table_count} tables",
-                    'impact': 'low',
-                    'suggestion': 'Verify if this isolation is intentional or if relationships are missing'
-                })
+                recommendations.append(
+                    {
+                        "type": "info",
+                        "category": "isolation",
+                        "schema": schema_name,
+                        "message": f"Schema '{schema_name}' is completely isolated with {schema_node.table_count} tables",
+                        "impact": "low",
+                        "suggestion": "Verify if this isolation is intentional or if relationships are missing",
+                    }
+                )
 
         # Hub table recommendations
         for table_name, table_node in self.table_nodes.items():
             if table_node.is_hub and len(table_node.incoming_fks) > 5:
-                recommendations.append({
-                    'type': 'optimization',
-                    'category': 'hub_table',
-                    'table': table_name,
-                    'message': f"Table '{table_name}' is a hub with {len(table_node.incoming_fks)} incoming references",
-                    'impact': 'medium',
-                    'suggestion': 'Consider indexing strategies and monitoring performance for this central table'
-                })
+                recommendations.append(
+                    {
+                        "type": "optimization",
+                        "category": "hub_table",
+                        "table": table_name,
+                        "message": f"Table '{table_name}' is a hub with {len(table_node.incoming_fks)} incoming references",
+                        "impact": "medium",
+                        "suggestion": "Consider indexing strategies and monitoring performance for this central table",
+                    }
+                )
 
         return recommendations
 
@@ -452,32 +464,32 @@ class SchemaMappingTool:
     def _categorize_coupling(self, ratio: float) -> str:
         """Categorize coupling level based on ratio."""
         if ratio == 0:
-            return 'isolated'
+            return "isolated"
         elif ratio <= 0.3:
-            return 'low'
+            return "low"
         elif ratio <= 0.7:
-            return 'medium'
+            return "medium"
         else:
-            return 'high'
+            return "high"
 
     def _get_node_color(self, schema_node: SchemaNode) -> str:
         """Get color for schema node based on characteristics."""
         if schema_node.isolation_score == 0:
-            return '#gray'
+            return "#gray"
         elif schema_node.dependency_score > 10:
-            return '#red'
+            return "#red"
         elif schema_node.dependency_score > 5:
-            return '#orange'
+            return "#orange"
         else:
-            return '#green'
+            return "#green"
 
     def _generate_layout_suggestions(self) -> dict[str, Any]:
         """Generate layout suggestions for visualization."""
         return {
-            'recommended_layout': 'force_directed',
-            'clustering': True,
-            'node_spacing': 'medium',
-            'edge_bundling': len(self.cross_schema_relationships) > 20
+            "recommended_layout": "force_directed",
+            "clustering": True,
+            "node_spacing": "medium",
+            "edge_bundling": len(self.cross_schema_relationships) > 20,
         }
 
     # Helper methods for database queries
@@ -497,10 +509,10 @@ class SchemaMappingTool:
             rows = await self.sql_driver.execute_query(query, (schema,))
             if rows and rows[0]:
                 return dict(rows[0].cells)
-            return {'table_count': 0, 'total_size_bytes': 0, 'total_rows': 0}
+            return {"table_count": 0, "total_size_bytes": 0, "total_rows": 0}
         except Exception as e:
             logger.warning(f"Could not get schema statistics for {schema}: {e}")
-            return {'table_count': 0, 'total_size_bytes': 0, 'total_rows': 0}
+            return {"table_count": 0, "total_size_bytes": 0, "total_rows": 0}
 
     async def _get_tables_in_schema(self, schema: str) -> list[str]:
         """Get list of tables in a schema."""
@@ -532,10 +544,10 @@ class SchemaMappingTool:
             rows = await self.sql_driver.execute_query(query, (schema, table))
             if rows and rows[0]:
                 return dict(rows[0].cells)
-            return {'size_bytes': 0, 'row_count': 0}
+            return {"size_bytes": 0, "row_count": 0}
         except Exception as e:
             logger.warning(f"Could not get table statistics for {schema}.{table}: {e}")
-            return {'size_bytes': 0, 'row_count': 0}
+            return {"size_bytes": 0, "row_count": 0}
 
     async def _get_foreign_key_relationships(self, schema: str, table: str) -> list[dict[str, Any]]:
         """Get foreign key relationships for a table."""
@@ -568,13 +580,13 @@ class SchemaMappingTool:
 
             for row in rows:
                 relationship = {
-                    'constraint_name': row.cells['constraint_name'],
-                    'from_schema': row.cells['from_schema'],
-                    'from_table': row.cells['from_table'],
-                    'from_columns': row.cells['from_columns'].split(','),
-                    'to_schema': row.cells['to_schema'],
-                    'to_table': row.cells['to_table'],
-                    'to_columns': row.cells['to_columns'].split(',')
+                    "constraint_name": row.cells["constraint_name"],
+                    "from_schema": row.cells["from_schema"],
+                    "from_table": row.cells["from_table"],
+                    "from_columns": row.cells["from_columns"].split(","),
+                    "to_schema": row.cells["to_schema"],
+                    "to_table": row.cells["to_table"],
+                    "to_columns": row.cells["to_columns"].split(","),
                 }
                 relationships.append(relationship)
 
@@ -587,13 +599,13 @@ class SchemaMappingTool:
         """Format schema relationship analysis result as human-readable text."""
         if "error" in result:
             return f"❌ Error: {result['error']}"
-        
+
         output = []
-        
+
         # Header
         output.append("🔗 SCHEMA RELATIONSHIP ANALYSIS")
         output.append("=" * 50)
-        
+
         # Summary
         summary = result.get("summary", {})
         output.append(f"Total Schemas: {summary.get('total_schemas', 0)}")
@@ -601,13 +613,13 @@ class SchemaMappingTool:
         output.append(f"Cross-Schema Relationships: {summary.get('cross_schema_relationships', 0)}")
         output.append(f"Intra-Schema Relationships: {summary.get('intra_schema_relationships', 0)}")
         output.append("")
-        
+
         # Schema Analysis
         schema_analysis = result.get("schema_analysis", {})
         if schema_analysis:
             output.append("📊 SCHEMA DEPENDENCY ANALYSIS")
             output.append("-" * 40)
-            
+
             # Most dependent schema
             most_dependent = schema_analysis.get("most_dependent")
             if most_dependent:
@@ -615,20 +627,20 @@ class SchemaMappingTool:
                 output.append(f"  • Dependency Score: {most_dependent['dependency_score']}")
                 output.append(f"  • Outgoing Dependencies: {len(most_dependent['outgoing_dependencies'])}")
                 output.append(f"  • Incoming Dependencies: {len(most_dependent['incoming_dependencies'])}")
-                
-                if most_dependent['outgoing_dependencies']:
+
+                if most_dependent["outgoing_dependencies"]:
                     output.append(f"  • Depends on: {', '.join(most_dependent['outgoing_dependencies'])}")
-                
-                if most_dependent['incoming_dependencies']:
+
+                if most_dependent["incoming_dependencies"]:
                     output.append(f"  • Depended on by: {', '.join(most_dependent['incoming_dependencies'])}")
-            
+
             # Most isolated schema
             most_isolated = schema_analysis.get("most_isolated")
-            if most_isolated and most_isolated['is_isolated']:
+            if most_isolated and most_isolated["is_isolated"]:
                 output.append(f"\n🏝️  Most Isolated Schema: {most_isolated['schema']}")
                 output.append(f"  • Tables: {most_isolated['table_count']}")
                 output.append(f"  • Size: {self._format_bytes(most_isolated['total_size_bytes'])}")
-            
+
             # Schema metrics
             schema_metrics = schema_analysis.get("schema_metrics", [])
             if schema_metrics:
@@ -636,28 +648,30 @@ class SchemaMappingTool:
                 for i, schema in enumerate(schema_metrics[:5], 1):
                     coupling_level = self._get_coupling_display(schema)
                     output.append(f"  {i}. {schema['schema']} - {coupling_level}")
-                    output.append(f"     Tables: {schema['table_count']}, Size: {self._format_bytes(schema['total_size_bytes'])}")
-                    
-                    if schema['outgoing_dependencies']:
+                    output.append(
+                        f"     Tables: {schema['table_count']}, Size: {self._format_bytes(schema['total_size_bytes'])}"
+                    )
+
+                    if schema["outgoing_dependencies"]:
                         output.append(f"     → Depends on: {', '.join(schema['outgoing_dependencies'])}")
-                    if schema['incoming_dependencies']:
+                    if schema["incoming_dependencies"]:
                         output.append(f"     ← Depended on by: {', '.join(schema['incoming_dependencies'])}")
-            
+
             # Dependency chains
             dependency_chains = schema_analysis.get("dependency_chains", [])
             if dependency_chains:
                 output.append(f"\n🔗 Dependency Chains:")
                 for i, chain in enumerate(dependency_chains[:5], 1):
                     output.append(f"  {i}. {' → '.join(chain)}")
-            
+
             output.append("")
-        
+
         # Table Analysis
         table_analysis = result.get("table_analysis", {})
         if table_analysis:
             output.append("📋 TABLE DEPENDENCY ANALYSIS")
             output.append("-" * 40)
-            
+
             # Most connected table
             most_connected = table_analysis.get("most_connected")
             if most_connected:
@@ -666,7 +680,7 @@ class SchemaMappingTool:
                 output.append(f"  • Outgoing FKs: {most_connected['outgoing_fks']}")
                 output.append(f"  • Incoming FKs: {most_connected['incoming_fks']}")
                 output.append(f"  • Size: {self._format_bytes(most_connected['size_bytes'])}")
-            
+
             # Hub tables
             hub_tables = table_analysis.get("hub_tables", [])
             if hub_tables:
@@ -674,95 +688,90 @@ class SchemaMappingTool:
                 for i, table in enumerate(hub_tables[:5], 1):
                     output.append(f"  {i}. {table['qualified_name']} - {table['incoming_fks']} incoming FKs")
                     output.append(f"     Size: {self._format_bytes(table['size_bytes'])}, Rows: {table['row_count']:,}")
-            
+
             # Isolated tables
             isolated_tables = table_analysis.get("isolated_tables", [])
             if isolated_tables:
                 output.append(f"\n🏝️  Isolated Tables (No FKs):")
                 isolated_count = len(isolated_tables)
                 output.append(f"  Total: {isolated_count} tables")
-                
+
                 if isolated_count > 0:
                     output.append(f"  Largest isolated tables:")
                     for i, table in enumerate(isolated_tables[:5], 1):
                         output.append(f"    {i}. {table['qualified_name']} - {self._format_bytes(table['size_bytes'])}")
-            
+
             output.append("")
-        
+
         # Relationship Patterns
         relationship_patterns = result.get("relationship_patterns", {})
         if relationship_patterns:
             output.append("🔄 RELATIONSHIP PATTERNS")
             output.append("-" * 40)
-            
+
             output.append(f"Cross-Schema Relationships: {relationship_patterns.get('cross_schema_count', 0)}")
             output.append(f"Intra-Schema Relationships: {relationship_patterns.get('intra_schema_count', 0)}")
             output.append(f"Total Relationships: {relationship_patterns.get('total_relationships', 0)}")
-            
+
             # Most common cross-schema pattern
             most_common = relationship_patterns.get("most_common_cross_schema")
             if most_common:
-                output.append(f"\n🔝 Most Common Cross-Schema Pattern: {most_common[0]} ({most_common[1]} relationships)")
-            
+                output.append(
+                    f"\n🔝 Most Common Cross-Schema Pattern: {most_common[0]} ({most_common[1]} relationships)"
+                )
+
             # Schema coupling analysis
             schema_coupling = relationship_patterns.get("schema_coupling", {})
             if schema_coupling:
                 output.append(f"\n📊 Schema Coupling Analysis:")
-                
+
                 # Sort by coupling ratio
-                sorted_coupling = sorted(
-                    schema_coupling.items(), 
-                    key=lambda x: x[1]['coupling_ratio'], 
-                    reverse=True
-                )
-                
+                sorted_coupling = sorted(schema_coupling.items(), key=lambda x: x[1]["coupling_ratio"], reverse=True)
+
                 for schema, coupling_data in sorted_coupling[:5]:
-                    level = coupling_data['coupling_level']
-                    ratio = coupling_data['coupling_ratio']
-                    external_refs = coupling_data['external_references']
-                    
-                    level_emoji = {
-                        'isolated': '🏝️',
-                        'low': '🟢',
-                        'medium': '🟡',
-                        'high': '🔴'
-                    }.get(level, '⚪')
-                    
-                    output.append(f"  {level_emoji} {schema}: {level.upper()} coupling (ratio: {ratio:.2f}, external refs: {external_refs})")
-            
+                    level = coupling_data["coupling_level"]
+                    ratio = coupling_data["coupling_ratio"]
+                    external_refs = coupling_data["external_references"]
+
+                    level_emoji = {"isolated": "🏝️", "low": "🟢", "medium": "🟡", "high": "🔴"}.get(level, "⚪")
+
+                    output.append(
+                        f"  {level_emoji} {schema}: {level.upper()} coupling (ratio: {ratio:.2f}, external refs: {external_refs})"
+                    )
+
             output.append("")
-        
+
         # Recommendations
         recommendations = result.get("recommendations", [])
         if recommendations:
             output.append("💡 RECOMMENDATIONS")
             output.append("-" * 40)
-            
+
             # Group recommendations by type
-            warnings = [r for r in recommendations if r['type'] == 'warning']
-            optimizations = [r for r in recommendations if r['type'] == 'optimization']
-            info = [r for r in recommendations if r['type'] == 'info']
-            
+            warnings = [r for r in recommendations if r["type"] == "warning"]
+            optimizations = [r for r in recommendations if r["type"] == "optimization"]
+            info = [r for r in recommendations if r["type"] == "info"]
+
             if warnings:
                 output.append("⚠️  Warnings:")
                 for rec in warnings:
                     output.append(f"  • {rec['message']}")
                     output.append(f"    💡 {rec['suggestion']}")
-            
+
             if optimizations:
                 output.append(f"\n🔧 Optimizations:")
                 for rec in optimizations:
                     output.append(f"  • {rec['message']}")
                     output.append(f"    💡 {rec['suggestion']}")
-            
+
             if info:
                 output.append(f"\nℹ️  Information:")
                 for rec in info:
                     output.append(f"  • {rec['message']}")
                     output.append(f"    💡 {rec['suggestion']}")
-            
+
             output.append("")
-        
+
         # Visual representation info
         visual_data = result.get("visual_representation", {})
         if visual_data:
@@ -773,32 +782,32 @@ class SchemaMappingTool:
                 output.append(f"Total Nodes: {metrics.get('total_nodes', 0)}")
                 output.append(f"Total Edges: {metrics.get('total_edges', 0)}")
                 output.append(f"Graph Density: {metrics.get('density', 0):.3f}")
-                
+
                 layout = visual_data.get("layout", {})
                 if layout:
                     output.append(f"Recommended Layout: {layout.get('recommended_layout', 'N/A')}")
                     output.append(f"Clustering: {layout.get('clustering', False)}")
                     output.append(f"Edge Bundling: {layout.get('edge_bundling', False)}")
-        
+
         return "\n".join(output)
-    
+
     def _format_bytes(self, bytes_value: int) -> str:
         """Format bytes into human-readable string."""
         if bytes_value == 0:
             return "0 B"
-        
+
         value = float(bytes_value)
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if value < 1024.0:
                 return f"{value:.1f} {unit}"
             value /= 1024.0
         return f"{value:.1f} PB"
-    
+
     def _get_coupling_display(self, schema: dict[str, Any]) -> str:
         """Get coupling level display string."""
-        score = schema.get('dependency_score', 0)
-        isolation = schema.get('isolation_score', 0)
-        
+        score = schema.get("dependency_score", 0)
+        isolation = schema.get("isolation_score", 0)
+
         if isolation == 0:
             return "🏝️ Isolated"
         elif score > 10:

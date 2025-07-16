@@ -17,7 +17,9 @@ class IndexHealthCalc:
         if not invalid_indexes:
             return "No invalid indexes found."
 
-        return "Invalid indexes found: " + "\n".join([f"{idx['name']} on {idx['table']} is invalid." for idx in invalid_indexes])
+        return "Invalid indexes found: " + "\n".join(
+            [f"{idx['name']} on {idx['table']} is invalid." for idx in invalid_indexes]
+        )
 
     async def duplicate_index_check(self) -> str:
         indexes = await self._indexes()
@@ -230,7 +232,9 @@ class IndexHealthCalc:
         for idx in bloated_indexes_dicts:
             bloat_mb = int(idx["bloat_bytes"]) / (1024 * 1024)
             total_mb = int(idx["index_bytes"]) / (1024 * 1024)
-            result.append(f"Index '{idx['index']}' on table '{idx['table']}' has {bloat_mb:.1f}MB bloat out of {total_mb:.1f}MB total size")
+            result.append(
+                f"Index '{idx['index']}' on table '{idx['table']}' has {bloat_mb:.1f}MB bloat out of {total_mb:.1f}MB total size"
+            )
 
         return "\n".join(result)
 

@@ -884,7 +884,12 @@ class SafeSqlDriver(SqlDriver):
             A_Expr_Kind.AEXPR_ILIKE,
         ):
             # Get the right-hand side of the LIKE expression (the pattern)
-            if isinstance(node.rexpr, A_Const) and node.rexpr.val is not None and hasattr(node.rexpr.val, "sval") and node.rexpr.val.sval is not None:
+            if (
+                isinstance(node.rexpr, A_Const)
+                and node.rexpr.val is not None
+                and hasattr(node.rexpr.val, "sval")
+                and node.rexpr.val.sval is not None
+            ):
                 # Nothing to do for now
                 pass
             else:
@@ -965,7 +970,8 @@ class SafeSqlDriver(SqlDriver):
                     else:
                         if not isinstance(stmt, tuple(self.ALLOWED_STMT_TYPES)):
                             raise ValueError(
-                                "Only SELECT, ANALYZE, VACUUM, EXPLAIN, SHOW and other read-only statements are allowed. Received: " + str(stmt)
+                                "Only SELECT, ANALYZE, VACUUM, EXPLAIN, SHOW and other read-only statements are allowed. Received: "
+                                + str(stmt)
                             )
                     self._validate_node(stmt)
             except Exception as e:
@@ -1024,7 +1030,9 @@ class SafeSqlDriver(SqlDriver):
         )
 
     @staticmethod
-    async def execute_param_query(sql_driver: SqlDriver, query: LiteralString, params: list[Any] | None = None) -> list[SqlDriver.RowResult] | None:
+    async def execute_param_query(
+        sql_driver: SqlDriver, query: LiteralString, params: list[Any] | None = None
+    ) -> list[SqlDriver.RowResult] | None:
         """Execute a query after validating it is safe"""
         if params:
             query_params = SafeSqlDriver.param_sql_to_query(query, params)
