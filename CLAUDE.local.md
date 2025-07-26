@@ -1,0 +1,2 @@
+- When ever the user tell to document, it means they want you to put the doc into a markdown file.
+- When user tell you to commit it, it means you dont need to run git add (because user have some changed file that dont need to add and commit), just run git commit with proper message to refect the changes.

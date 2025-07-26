@@ -39,7 +39,7 @@ from .top_queries import TopQueriesCalc
 from .vacuum_analysis import VacuumAnalysisTool
 
 # Initialize FastMCP with default settings
-mcp = FastMCP("postgres-mcp")
+mcp = FastMCP("postgres-mcp-pro-plus")
 
 # Constants
 PG_STAT_STATEMENTS = "pg_stat_statements"
@@ -431,11 +431,7 @@ async def get_object_details(
                 [schema_name, object_name],
             )
 
-            indexes = (
-                [{"name": r.cells["indexname"], "definition": r.cells["indexdef"]} for r in idx_rows]
-                if idx_rows
-                else []
-            )
+            indexes = [{"name": r.cells["indexname"], "definition": r.cells["indexdef"]} for r in idx_rows] if idx_rows else []
 
             result = {
                 "basic": {"schema": schema_name, "name": object_name, "type": object_type},
@@ -497,9 +493,7 @@ async def get_object_details(
         return format_error_response(str(e))
 
 
-@mcp.tool(
-    description="Explains the execution plan for a SQL query, showing how the database will execute it and provides detailed cost estimates."
-)
+@mcp.tool(description="Explains the execution plan for a SQL query, showing how the database will execute it and provides detailed cost estimates.")
 async def explain_query(
     sql: str = Field(description="SQL query to explain"),
     analyze: bool = Field(
@@ -627,9 +621,7 @@ async def analyze_query_indexes(
     if len(queries) == 0:
         return format_error_response("Please provide a non-empty list of queries to analyze.")
     if len(queries) > MAX_NUM_INDEX_TUNING_QUERIES:
-        return format_error_response(
-            f"Please provide a list of up to {MAX_NUM_INDEX_TUNING_QUERIES} queries to analyze."
-        )
+        return format_error_response(f"Please provide a list of up to {MAX_NUM_INDEX_TUNING_QUERIES} queries to analyze.")
 
     try:
         sql_driver = await get_sql_driver()
@@ -684,9 +676,7 @@ async def get_top_queries(
         "for resource-intensive queries",
         default="resources",
     ),
-    limit: int = Field(
-        description="Number of queries to return when ranking based on mean_time or total_time", default=10
-    ),
+    limit: int = Field(description="Number of queries to return when ranking based on mean_time or total_time", default=10),
 ) -> ResponseType:
     try:
         sql_driver = await get_sql_driver()
@@ -697,13 +687,9 @@ async def get_top_queries(
             return format_text_response(result)
         elif sort_by == "mean_time" or sort_by == "total_time":
             # Map the sort_by values to what get_top_queries_by_time expects
-            result = await top_queries_tool.get_top_queries_by_time(
-                limit=limit, sort_by="mean" if sort_by == "mean_time" else "total"
-            )
+            result = await top_queries_tool.get_top_queries_by_time(limit=limit, sort_by="mean" if sort_by == "mean_time" else "total")
         else:
-            return format_error_response(
-                "Invalid sort criteria. Please use 'resources' or 'mean_time' or 'total_time'."
-            )
+            return format_error_response("Invalid sort criteria. Please use 'resources' or 'mean_time' or 'total_time'.")
         return format_text_response(result)
     except Exception as e:
         logger.error(f"Error getting slow queries: {e}")
@@ -757,9 +743,7 @@ async def analyze_schema_relationships() -> ResponseType:
         return format_error_response(str(e))
 
 
-@mcp.tool(
-    description="Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations"
-)
+@mcp.tool(description="Get comprehensive blocking queries analysis with lock information, hierarchy, and recommendations")
 async def get_blocking_queries() -> ResponseType:
     """Get comprehensive information about blocking queries and locks in the database with analysis and recommendations."""
     try:
