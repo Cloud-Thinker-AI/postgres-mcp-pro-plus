@@ -9,9 +9,9 @@ from openai import OpenAI
 from pglast.ast import SelectStmt
 from pydantic import BaseModel
 
-from postgres_mcp.artifacts import ErrorResult
-from postgres_mcp.explain.explain_plan import ExplainPlanTool
-from postgres_mcp.sql import TableAliasVisitor
+from ..artifacts import ErrorResult
+from ..explain.explain_plan import ExplainPlanTool
+from ..sql import TableAliasVisitor
 
 from ..sql import IndexDefinition
 from ..sql import SqlDriver

@@ -1,6 +1,6 @@
 [project]
 name = "postgres-mcp-pro-plus"
-version = "0.3.1"
+version = "0.3.5"
 description = "PostgreSQL Tuning and Analysis Tool"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -18,18 +18,18 @@ license = "mit"
 license-files = ["LICENSE"]
 
 [[project.authors]]
-name = "Johann Schleier-Smith"
-email = "jssmith@crystal.cloud"
+name = "Johann Schleier-Smith + Henry (Duc) Bui"
+emails = ["jssmith@crystal.cloud", "henry.bmduc@gmail.com"]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/postgres-mcp-pro-plus"]
+packages = ["src/postgres_mcp_pro_plus"]
 
 [project.scripts]
-postgres-mcp = "postgres_mcp_pro_plus:main"
+postgres-mcp-pro-plus = "postgres_mcp_pro_plus:main"
 
 [tool.pytest.ini_options]
 pythonpath = ["./src"]

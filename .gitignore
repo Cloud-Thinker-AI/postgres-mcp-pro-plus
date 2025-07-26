@@ -187,3 +187,4 @@ devenv.local.nix
 .env/
 
 .claude
+CLAUDE.local.md
