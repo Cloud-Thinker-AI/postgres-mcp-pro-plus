@@ -19,37 +19,42 @@
 ## 📋 Available Tools
 
 ### Core Database Operations
-| Tool Name | Description |
-|-----------|-------------|
-| `list_schemas` | List all schemas with ownership and type classification |
-| `list_objects` | Browse database objects (tables, views, sequences, extensions) by schema |
-| `get_object_details` | Detailed object analysis including columns, constraints, and indexes |
-| `execute_sql` | Execute SQL with safety controls (restricted/unrestricted modes) |
+
+| Tool Name            | Description                                                              |
+| -------------------- | ------------------------------------------------------------------------ |
+| `list_schemas`       | List all schemas with ownership and type classification                  |
+| `list_objects`       | Browse database objects (tables, views, sequences, extensions) by schema |
+| `get_object_details` | Detailed object analysis including columns, constraints, and indexes     |
+| `execute_sql`        | Execute SQL with safety controls (restricted/unrestricted modes)         |
 
 ### Performance & Optimization
-| Tool Name | Description |
-|-----------|-------------|
-| `explain_query` | Advanced execution plan analysis with HypoPG hypothetical index simulation |
-| `get_top_queries` | Identify slow and resource-intensive queries with performance metrics |
-| `analyze_workload_indexes` | AI-powered index recommendations from workload analysis (DTA/LLM) |
-| `analyze_query_indexes` | Targeted index optimization for specific query sets (up to 10 queries) |
+
+| Tool Name                  | Description                                                                |
+| -------------------------- | -------------------------------------------------------------------------- |
+| `explain_query`            | Advanced execution plan analysis with HypoPG hypothetical index simulation |
+| `get_top_queries`          | Identify slow and resource-intensive queries with performance metrics      |
+| `analyze_workload_indexes` | AI-powered index recommendations from workload analysis (DTA/LLM)          |
+| `analyze_query_indexes`    | Targeted index optimization for specific query sets (up to 10 queries)     |
 
 ### Health & Monitoring
-| Tool Name | Description |
-|-----------|-------------|
-| `analyze_db_health` | Comprehensive health checks: indexes, connections, vacuum, sequences, replication, buffer cache, constraints |
-| `get_blocking_queries` | Advanced blocking analysis with lock hierarchy visualization and resolution recommendations |
-| `analyze_vacuum_requirements` | Comprehensive vacuum analysis with bloat detection and maintenance recommendations |
+
+| Tool Name                     | Description                                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `analyze_db_health`           | Comprehensive health checks: indexes, connections, vacuum, sequences, replication, buffer cache, constraints |
+| `get_blocking_queries`        | Advanced blocking analysis with lock hierarchy visualization and resolution recommendations                  |
+| `analyze_vacuum_requirements` | Comprehensive vacuum analysis with bloat detection and maintenance recommendations                           |
 
 ### Advanced Analysis
-| Tool Name | Description |
-|-----------|-------------|
-| `get_database_overview` | Enterprise-grade database assessment with performance, security, and relationship analysis |
-| `analyze_schema_relationships` | Schema dependency mapping with visual relationship analysis and coupling metrics |
+
+| Tool Name                      | Description                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------------------ |
+| `get_database_overview`        | Enterprise-grade database assessment with performance, security, and relationship analysis |
+| `analyze_schema_relationships` | Schema dependency mapping with visual relationship analysis and coupling metrics           |
 
 ## 🔧 Tool Details & Capabilities
 
 ### 🔍 Database Overview Analysis
+
 **Enterprise-grade comprehensive database assessment**
 
 The `get_database_overview` tool provides multi-dimensional analysis:
@@ -61,16 +66,19 @@ The `get_database_overview` tool provides multi-dimensional analysis:
 - **🩺 Health Indicators**: Connection health, vacuum statistics, and system performance metrics
 
 **Configuration Options:**
+
 - `max_tables` (default: 500): Maximum tables to analyze per schema for performance control
 - `sampling_mode` (default: true): Statistical sampling for large datasets to optimize execution time
 - `timeout` (default: 300): Maximum execution time with graceful timeout handling
 
 ### 🔒 Advanced Blocking Queries Analysis
+
 **Real-time lock contention detection and resolution**
 
 The `get_blocking_queries` tool features enterprise-grade capabilities:
 
 **🎯 Core Features:**
+
 - **Modern Detection**: Uses PostgreSQL's `pg_blocking_pids()` function for accurate blocking identification
 - **Lock Hierarchy Visualization**: Complete blocking chains and process relationships
 - **Comprehensive Metrics**: Process details, wait events, timing, lock types, and affected relations
@@ -78,6 +86,7 @@ The `get_blocking_queries` tool features enterprise-grade capabilities:
 - **Production Ready**: Designed for enterprise database monitoring and performance troubleshooting
 
 **📋 Analysis Output:**
+
 - **Process Information**: PID, user, application name, client address, and connection details
 - **Query Context**: Full query text, execution timing, and resource consumption
 - **Lock Details**: Lock types, modes, affected database objects, and wait events
@@ -86,11 +95,13 @@ The `get_blocking_queries` tool features enterprise-grade capabilities:
 - **Categorized Recommendations**: 🚨 Critical, ⚠️ Warning, 💡 Optimization, 🎯 Hotspot alerts
 
 **🔧 PostgreSQL Compatibility:**
+
 - **Minimum**: PostgreSQL 9.6+ (requires `pg_blocking_pids()` function)
 - **Recommended**: PostgreSQL 12+ (enhanced lock monitoring features)
 - **Optimal**: PostgreSQL 14+ (includes `pg_locks.waitstart` for precise wait timing)
 
 ### 🧹 Vacuum Analysis & Maintenance
+
 **Comprehensive maintenance planning with bloat detection**
 
 The `analyze_vacuum_requirements` tool provides:
@@ -103,6 +114,7 @@ The `analyze_vacuum_requirements` tool provides:
 - **⚡ Configuration Optimization**: Tuning suggestions for vacuum parameters
 
 ### 🗺️ Schema Relationship Analysis
+
 **Advanced dependency mapping and visualization**
 
 The `analyze_schema_relationships` tool offers:
@@ -114,9 +126,11 @@ The `analyze_schema_relationships` tool offers:
 - **🔍 Pattern Detection**: Common anti-patterns and architectural recommendations
 
 ### ⚡ Index Optimization Intelligence
+
 **AI-powered index recommendations with advanced algorithms**
 
 **Database Tuning Advisor (DTA) Features:**
+
 - **🧠 Pareto Optimization**: Multi-objective optimization balancing performance and storage
 - **📊 Workload Analysis**: Pattern recognition from pg_stat_statements data
 - **💰 Cost-Benefit Analysis**: Storage budget constraints with performance impact assessment
@@ -124,6 +138,7 @@ The `analyze_schema_relationships` tool offers:
 - **⏱️ Time-bounded Analysis**: Anytime algorithm with configurable runtime limits
 
 **LLM-Powered Optimization:**
+
 - **🤖 Intelligent Analysis**: Natural language understanding of query patterns
 - **📝 Contextual Recommendations**: Human-readable explanations with implementation guidance
 - **🔍 Advanced Pattern Recognition**: Complex query pattern detection and optimization
@@ -131,6 +146,7 @@ The `analyze_schema_relationships` tool offers:
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - PostgreSQL 9.6+ (PostgreSQL 12+ recommended, 14+ optimal)
 - Python 3.8+
 - Optional: HypoPG extension for hypothetical index analysis
@@ -138,6 +154,7 @@ The `analyze_schema_relationships` tool offers:
 ### Installation & Setup
 
 #### 1. Environment Configuration
+
 Create a `.env` file in the project root:
 
 ```bash
@@ -145,6 +162,7 @@ DATABASE_URI=postgresql://username:password@localhost:5432/database_name
 ```
 
 #### 2. Native Deployment
+
 ```bash
 # Start the MCP server (default: stdio transport, unrestricted mode)
 ./start.sh
@@ -163,6 +181,7 @@ DATABASE_URI=postgresql://username:password@localhost:5432/database_name
 ```
 
 #### 3. Docker Deployment
+
 ```bash
 # Start with Docker Compose
 docker-compose up -d
@@ -172,6 +191,7 @@ docker-compose logs -f postgres-mcp
 ```
 
 #### 4. Interactive Testing (MCP Inspector)
+
 ```bash
 # Terminal 1: Start the MCP server with SSE transport
 ./start.sh --transport sse --sse-port 8099
@@ -181,19 +201,22 @@ docker-compose logs -f postgres-mcp
 ```
 
 The MCP Inspector provides:
+
 - **Interactive Tool Testing**: Test all database analysis tools with a web UI
-- **Parameter Exploration**: Discover tool capabilities and configuration options  
+- **Parameter Exploration**: Discover tool capabilities and configuration options
 - **Real-time Results**: View formatted analysis results in a user-friendly interface
 - **Documentation**: Built-in tool documentation and usage examples
 
 ### 🔧 Access Modes
 
 **Unrestricted Mode** (Default):
+
 - Full SQL execution capabilities
 - Database modification operations
 - Complete administrative access
 
 **Restricted Mode** (Recommended for analysis):
+
 - Read-only operations with safety controls
 - SQL injection protection
 - Timeout enforcement (30s default)
@@ -202,6 +225,7 @@ The MCP Inspector provides:
 ### 📊 Usage Examples
 
 #### Basic Server Operations
+
 ```bash
 # Show help and configuration options
 ./start.sh --help
@@ -217,6 +241,7 @@ The MCP Inspector provides:
 ```
 
 #### Health Check Examples
+
 ```bash
 # Comprehensive health analysis (via MCP client)
 analyze_db_health --health-type all
@@ -233,6 +258,7 @@ get_blocking_queries
 ## 🏗️ Architecture & Components
 
 ### Core Architecture
+
 ```
 postgres-mcp/
 ├── 🔧 server.py              # MCP server & tool registration
@@ -248,8 +274,9 @@ postgres-mcp/
 ```
 
 ### Database Health Components
+
 - **Index Health**: Invalid, duplicate, bloated, and unused index detection
-- **Connection Health**: Connection utilization and capacity analysis  
+- **Connection Health**: Connection utilization and capacity analysis
 - **Vacuum Health**: Transaction wraparound and maintenance monitoring
 - **Sequence Health**: Sequence exhaustion and overflow protection
 - **Replication Health**: Lag monitoring and slot management
@@ -259,20 +286,23 @@ postgres-mcp/
 ### 🤖 AI Integration Features
 
 **Database Tuning Advisor (DTA):**
+
 - Pareto-optimal index selection algorithm
 - Multi-query workload optimization
 - Budget-constrained recommendation engine
 - Time-bounded analysis with anytime approach
 
 **LLM-Powered Analysis:**
+
 - Natural language query pattern understanding
-- Contextual optimization recommendations  
+- Contextual optimization recommendations
 - Human-readable explanations and guidance
 - Advanced pattern recognition capabilities
 
 ## 📈 Recent Enhancements
 
 ### Latest Features (Recent Commits)
+
 - ✅ **Comprehensive Tool Analysis**: Detailed analysis document with improvement recommendations
 - ✅ **Enhanced Readability**: Streamlined code formatting across all modules
 - ✅ **Robust Error Handling**: Improved None value handling in vacuum analysis
@@ -283,6 +313,7 @@ postgres-mcp/
 - ✅ **Vacuum Analysis Tool**: Comprehensive maintenance recommendations and bloat detection
 
 ### Architecture Improvements
+
 - **Modular Design**: Enhanced component separation and reusability
 - **Async Optimization**: Improved performance with better async patterns
 - **Safety Framework**: Comprehensive SQL execution safety controls
@@ -293,11 +324,13 @@ postgres-mcp/
 ## 📚 Documentation & Development
 
 ### Advanced Documentation
+
 - **[Database Tools Analysis](plan/database-tools-analysis.md)**: Comprehensive analysis of all tools with improvement recommendations
-- **[Tool Improvements Roadmap](todos/tool_improvements.md)**: Priority-based enhancement roadmap *(if available)*
+- **[Tool Improvements Roadmap](todos/tool_improvements.md)**: Priority-based enhancement roadmap _(if available)_
 - **Technical Implementation**: Detailed code documentation and API references
 
 ### Extension Points
+
 - **Custom Health Checks**: Add domain-specific health monitoring
 - **Plugin Architecture**: Extend with custom analysis tools
 - **Integration APIs**: Connect with external monitoring systems
@@ -306,13 +339,15 @@ postgres-mcp/
 ## 🔒 Security & Best Practices
 
 ### Security Features
+
 - **SQL Injection Protection**: Comprehensive input sanitization
-- **Access Mode Controls**: Restricted/unrestricted operation modes  
+- **Access Mode Controls**: Restricted/unrestricted operation modes
 - **Timeout Enforcement**: Configurable query timeout protection
 - **Parameter Validation**: Robust input validation and sanitization
 - **Error Handling**: Secure error reporting without information leakage
 
 ### Production Guidelines
+
 - Use **restricted mode** for production analysis
 - Configure appropriate **timeout values** for large operations
 - Monitor **resource usage** during analysis operations

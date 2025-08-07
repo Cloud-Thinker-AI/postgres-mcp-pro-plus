@@ -3,7 +3,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
 from postgres_mcp.server import AccessMode
 from postgres_mcp.server import get_sql_driver
 from postgres_mcp.sql import SafeSqlDriver

@@ -58,15 +58,8 @@ test:
 # Run linting
 lint:
 	@echo "🔍 Running linting checks..."
-	uv run ruff check src/
-	uv run pyright src/
+	uv run pre-commit run --all-files
 	@echo "✅ Linting complete"
-
-# Format code
-format:
-	@echo "🎨 Formatting code..."
-	uv run ruff format src/
-	@echo "✅ Formatting complete"
 
 # Install in development mode
 dev-install:

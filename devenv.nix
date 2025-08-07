@@ -55,7 +55,7 @@ in
   #     settings.shared_preload_libraries = "pg_stat_statements";
   #   };
 
-  # https://devenv.sh/scripts/   
+  # https://devenv.sh/scripts/
   scripts.hello.exec = ''
     echo hello from $GREET
   '';

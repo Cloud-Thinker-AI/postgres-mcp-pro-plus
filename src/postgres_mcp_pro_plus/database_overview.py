@@ -37,9 +37,7 @@ class DatabaseOverviewTool:
         start_time = time.time()
         try:
             # Add timeout wrapper
-            result = await asyncio.wait_for(
-                self._get_database_overview_internal(max_tables, sampling_mode, start_time), timeout=timeout
-            )
+            result = await asyncio.wait_for(self._get_database_overview_internal(max_tables, sampling_mode, start_time), timeout=timeout)
             return self._format_as_text(result)
         except asyncio.TimeoutError:
             logger.warning(f"Database overview timed out after {timeout} seconds")
@@ -66,9 +64,7 @@ class DatabaseOverviewTool:
             }
             return self._format_as_text(error_result)
 
-    async def _get_database_overview_internal(
-        self, max_tables: int, sampling_mode: bool, start_time: float
-    ) -> dict[str, Any]:
+    async def _get_database_overview_internal(self, max_tables: int, sampling_mode: bool, start_time: float) -> dict[str, Any]:
         """Internal implementation of database overview."""
         try:
             db_info = {
@@ -184,9 +180,7 @@ class DatabaseOverviewTool:
                 "active_connections": row["active_connections"],
                 "total_connections": row["total_connections"],
                 "max_connections": row["max_connections"],
-                "connection_usage_percent": round((row["total_connections"] / row["max_connections"]) * 100, 2)
-                if row["max_connections"] > 0
-                else 0,
+                "connection_usage_percent": round((row["total_connections"] / row["max_connections"]) * 100, 2) if row["max_connections"] > 0 else 0,
             }
 
     async def _process_schema(
@@ -414,9 +408,7 @@ class DatabaseOverviewTool:
             logger.warning(f"Could not get stats for {schema}.{table}: {e}")
             return {"error": str(e)}
 
-    async def _add_top_tables_summary(
-        self, db_info: dict[str, Any], all_tables_with_stats: list[dict[str, Any]]
-    ) -> None:
+    async def _add_top_tables_summary(self, db_info: dict[str, Any], all_tables_with_stats: list[dict[str, Any]]) -> None:
         """Add top tables summary for performance insights."""
         # Top 5 tables by size
         top_by_size = sorted(all_tables_with_stats, key=lambda x: x["size_bytes"], reverse=True)[:5]
@@ -586,9 +578,7 @@ class DatabaseOverviewTool:
             value /= 1024.0
         return f"{value:.1f} PB"
 
-    async def _identify_performance_hotspots(
-        self, db_info: dict[str, Any], all_tables_with_stats: list[dict[str, Any]]
-    ) -> None:
+    async def _identify_performance_hotspots(self, db_info: dict[str, Any], all_tables_with_stats: list[dict[str, Any]]) -> None:
         """Identify performance hotspots in the database."""
         try:
             logger.info("Identifying performance hotspots...")
@@ -707,9 +697,9 @@ class DatabaseOverviewTool:
                 "large_tables_with_issues",
                 "high_modification_tables",
             ]:
-                hotspots[hotspot_type] = sorted(
-                    hotspots[hotspot_type], key=lambda x: (x["severity"] == "HIGH", x.get("size_mb", 0)), reverse=True
-                )[:10]  # Limit to top 10
+                hotspots[hotspot_type] = sorted(hotspots[hotspot_type], key=lambda x: (x["severity"] == "HIGH", x.get("size_mb", 0)), reverse=True)[
+                    :10
+                ]  # Limit to top 10
 
             hotspots["tables_needing_maintenance"] = sorted(
                 hotspots["tables_needing_maintenance"],
@@ -753,7 +743,7 @@ class DatabaseOverviewTool:
             db_info["schema_relationship_mapping"] = {"analysis_text": schema_mapping_results}
 
             # Extract a simple count for logging (since we now get text, use a simpler approach)
-            logger.info(f"Schema relationship mapping complete")
+            logger.info("Schema relationship mapping complete")
 
         except Exception as e:
             logger.error(f"Error adding schema relationship mapping: {e}")
@@ -818,7 +808,7 @@ class DatabaseOverviewTool:
 
             recommendations = security_overview.get("recommendations", [])
             if recommendations:
-                output.append(f"\n💡 Recommendations:")
+                output.append("\n💡 Recommendations:")
                 for rec in recommendations:
                     output.append(f"  • {rec}")
             output.append("")
@@ -835,23 +825,19 @@ class DatabaseOverviewTool:
 
             # High scan ratio tables
             if hotspots.get("high_scan_ratio_tables"):
-                output.append(f"\n📊 High Sequential Scan Ratio Tables:")
+                output.append("\n📊 High Sequential Scan Ratio Tables:")
                 for table in hotspots["high_scan_ratio_tables"][:5]:
-                    output.append(
-                        f"  • {table['qualified_name']} - {table['seq_scan_ratio']}% seq scans ({table['severity']})"
-                    )
+                    output.append(f"  • {table['qualified_name']} - {table['seq_scan_ratio']}% seq scans ({table['severity']})")
 
             # High dead tuple tables
             if hotspots.get("high_dead_tuple_tables"):
-                output.append(f"\n💀 High Dead Tuple Ratio Tables:")
+                output.append("\n💀 High Dead Tuple Ratio Tables:")
                 for table in hotspots["high_dead_tuple_tables"][:5]:
-                    output.append(
-                        f"  • {table['qualified_name']} - {table['dead_tuple_ratio']}% dead tuples ({table['severity']})"
-                    )
+                    output.append(f"  • {table['qualified_name']} - {table['dead_tuple_ratio']}% dead tuples ({table['severity']})")
 
             # Maintenance recommendations
             if hotspots.get("tables_needing_maintenance"):
-                output.append(f"\n🔧 Tables Needing Maintenance:")
+                output.append("\n🔧 Tables Needing Maintenance:")
                 for table in hotspots["tables_needing_maintenance"][:5]:
                     recs = ", ".join(table["recommendations"])
                     output.append(f"  • {table['qualified_name']} - {recs} ({table['priority']})")
@@ -870,21 +856,21 @@ class DatabaseOverviewTool:
             # Most connected tables
             most_connected = rel_summary.get("most_connected_tables", [])
             if most_connected:
-                output.append(f"\n🌐 Most Connected Tables:")
+                output.append("\n🌐 Most Connected Tables:")
                 for table in most_connected[:5]:
                     output.append(f"  • {table['table']} - {table['connections']} connections")
 
             # Hub tables
             hub_tables = rel_summary.get("hub_tables", [])
             if hub_tables:
-                output.append(f"\n🎯 Hub Tables (Most Referenced):")
+                output.append("\n🎯 Hub Tables (Most Referenced):")
                 for table in hub_tables[:5]:
                     output.append(f"  • {table['table']} - referenced by {table['referenced_by']} tables")
 
             # Insights
             insights = rel_summary.get("relationship_insights", [])
             if insights:
-                output.append(f"\n💡 Relationship Insights:")
+                output.append("\n💡 Relationship Insights:")
                 for insight in insights:
                     output.append(f"  • {insight}")
             output.append("")
@@ -901,9 +887,7 @@ class DatabaseOverviewTool:
                 output.append(f"  Rows: {schema_info.get('total_rows', 0):,}")
 
                 if schema_info.get("is_sampled"):
-                    output.append(
-                        f"  ⚠️  Sampled: {schema_info.get('tables_analyzed', 0)}/{schema_info.get('table_count', 0)} tables analyzed"
-                    )
+                    output.append(f"  ⚠️  Sampled: {schema_info.get('tables_analyzed', 0)}/{schema_info.get('table_count', 0)} tables analyzed")
 
                 # Show top tables in schema
                 tables = schema_info.get("tables", {})
@@ -915,7 +899,7 @@ class DatabaseOverviewTool:
                     )[:3]
 
                     if top_schema_tables:
-                        output.append(f"  Top tables:")
+                        output.append("  Top tables:")
                         for table_name, table_info in top_schema_tables:
                             output.append(f"    • {table_name} - {table_info.get('size_readable', 'N/A')}")
 

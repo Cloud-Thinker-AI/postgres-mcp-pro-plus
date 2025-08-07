@@ -246,9 +246,7 @@ class VacuumAnalysisTool:
         analysis_results["autovacuum_analysis"] = {
             "tables": autovacuum_tables,
             "status_distribution": status_counts,
-            "problematic_tables": [
-                t for t in autovacuum_tables if t["autovacuum_status"] in ["OVERDUE", "APPROACHING"]
-            ],
+            "problematic_tables": [t for t in autovacuum_tables if t["autovacuum_status"] in ["OVERDUE", "APPROACHING"]],
         }
 
     async def _analyze_vacuum_performance(self, analysis_results: dict[str, Any]) -> None:
@@ -490,11 +488,7 @@ class VacuumAnalysisTool:
 
         # Check for large tables that might need custom settings
         bloat_data = analysis_results.get("bloat_analysis", {})
-        large_bloated_tables = [
-            t
-            for t in bloat_data.get("tables", [])
-            if t["total_size_mb"] > 10000 and t["bloat_severity"] in ["HIGH", "CRITICAL"]
-        ]
+        large_bloated_tables = [t for t in bloat_data.get("tables", []) if t["total_size_mb"] > 10000 and t["bloat_severity"] in ["HIGH", "CRITICAL"]]
 
         if large_bloated_tables:
             config_recommendations.append(
@@ -548,7 +542,7 @@ class VacuumAnalysisTool:
                 output.append(f"   Description: {issue['description']}")
                 output.append(f"   Action Required: {issue['action_required']}")
                 if issue.get("time_sensitive"):
-                    output.append(f"   ⏰ TIME SENSITIVE")
+                    output.append("   ⏰ TIME SENSITIVE")
                 output.append("")
 
         # Bloat Analysis
@@ -558,12 +552,10 @@ class VacuumAnalysisTool:
             output.append("-" * 30)
 
             severity_dist = bloat_analysis.get("severity_distribution", {})
-            output.append(f"Severity Distribution:")
+            output.append("Severity Distribution:")
             for severity, count in severity_dist.items():
                 if count > 0:
-                    severity_emoji = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢", "HEALTHY": "✅"}.get(
-                        severity, "⚪"
-                    )
+                    severity_emoji = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🟢", "HEALTHY": "✅"}.get(severity, "⚪")
                     output.append(f"  {severity_emoji} {severity}: {count} tables")
 
             high_priority = bloat_analysis.get("high_priority_tables", [])
@@ -571,9 +563,7 @@ class VacuumAnalysisTool:
                 output.append(f"\n🎯 High Priority Tables ({len(high_priority)}):")
                 for table in high_priority[:10]:  # Show top 10
                     output.append(f"  • {table['qualified_name']}")
-                    output.append(
-                        f"    Dead Tuples: {table['dead_percentage']:.1f}% ({table['dead_tuples']:,} dead, {table['live_tuples']:,} live)"
-                    )
+                    output.append(f"    Dead Tuples: {table['dead_percentage']:.1f}% ({table['dead_tuples']:,} dead, {table['live_tuples']:,} live)")
                     output.append(f"    Size: {table['total_size_mb']:.1f} MB")
                     output.append(f"    Severity: {table['bloat_severity']}")
                     output.append(f"    Recommendation: {table['recommendation']}")
@@ -591,7 +581,7 @@ class VacuumAnalysisTool:
             output.append("-" * 30)
 
             status_dist = autovacuum_analysis.get("status_distribution", {})
-            output.append(f"Status Distribution:")
+            output.append("Status Distribution:")
             for status, count in status_dist.items():
                 if count > 0:
                     status_emoji = {"OVERDUE": "🔴", "APPROACHING": "🟡", "HEALTHY": "✅"}.get(status, "⚪")
@@ -603,9 +593,7 @@ class VacuumAnalysisTool:
                 for table in problematic[:10]:  # Show top 10
                     output.append(f"  • {table['qualified_name']}")
                     output.append(f"    Status: {table['autovacuum_status']}")
-                    output.append(
-                        f"    Dead Tuples: {table['dead_tuples']:,} (threshold: {table['calculated_threshold']:,.0f})"
-                    )
+                    output.append(f"    Dead Tuples: {table['dead_tuples']:,} (threshold: {table['calculated_threshold']:,.0f})")
                     output.append(f"    Hours Since Last Autovacuum: {table['hours_since_last_autovacuum']:.1f}")
                     output.append(f"    Autovacuum Count: {table['autovacuum_count']}")
                     output.append("")

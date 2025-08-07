@@ -2,7 +2,6 @@ import logging
 
 import pytest
 import pytest_asyncio
-
 from postgres_mcp.sql import SqlDriver
 from postgres_mcp.top_queries import PG_STAT_STATEMENTS
 from postgres_mcp.top_queries import TopQueriesCalc

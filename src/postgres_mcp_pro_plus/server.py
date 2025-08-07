@@ -17,8 +17,6 @@ from mcp.server.fastmcp import FastMCP
 from pydantic import Field
 from pydantic import validate_call
 
-from .index.dta_calc import DatabaseTuningAdvisor
-
 from .artifacts import ErrorResult
 from .artifacts import ExplainPlanArtifact
 from .blocking_queries import BlockingQueriesAnalyzer
@@ -26,6 +24,7 @@ from .database_health import DatabaseHealthTool
 from .database_health import HealthType
 from .database_overview import DatabaseOverviewTool
 from .explain import ExplainPlanTool
+from .index.dta_calc import DatabaseTuningAdvisor
 from .index.index_opt_base import MAX_NUM_INDEX_TUNING_QUERIES
 from .index.llm_opt import LLMOptimizerTool
 from .index.presentation import TextPresentation
@@ -176,7 +175,7 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
                 output.append(f"  Definition: {idx['definition']}")
 
     elif object_type == "sequence":
-        output.append(f"🔢 SEQUENCE DETAILS")
+        output.append("🔢 SEQUENCE DETAILS")
         output.append("=" * 30)
         output.append(f"Schema: {details.get('schema', 'N/A')}")
         output.append(f"Name: {details.get('name', 'N/A')}")
@@ -185,7 +184,7 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
         output.append(f"Increment: {details.get('increment', 'N/A')}")
 
     elif object_type == "extension":
-        output.append(f"🔌 EXTENSION DETAILS")
+        output.append("🔌 EXTENSION DETAILS")
         output.append("=" * 30)
         output.append(f"Name: {details.get('name', 'N/A')}")
         output.append(f"Version: {details.get('version', 'N/A')}")

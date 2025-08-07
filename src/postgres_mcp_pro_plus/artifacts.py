@@ -157,7 +157,9 @@ class ExplainPlanArtifact:
 
         # Add actual metrics if available in a compact form
         if node.actual_total_time is not None:
-            output += f" [Actual: {node.actual_startup_time:.2f}..{node.actual_total_time:.2f} ms, Rows: {node.actual_rows}, Loops: {node.actual_loops}]"
+            output += (
+                f" [Actual: {node.actual_startup_time:.2f}..{node.actual_total_time:.2f} ms, Rows: {node.actual_rows}, Loops: {node.actual_loops}]"
+            )
 
         # Add filter if present
         if node.filter:
@@ -307,9 +309,7 @@ class ExplainPlanArtifact:
             before_scans = [line for line in before_lines if "Seq Scan" in line]
             after_scans = [line for line in after_lines if "Seq Scan" in line]
             if len(before_scans) > len(after_scans):
-                diff_lines.append(
-                    f"- {len(before_scans) - len(after_scans)} sequential scans replaced with more efficient access methods"
-                )
+                diff_lines.append(f"- {len(before_scans) - len(after_scans)} sequential scans replaced with more efficient access methods")
 
             # Look for new index scans
             before_idx_scans = [line for line in before_lines if "Index Scan" in line]

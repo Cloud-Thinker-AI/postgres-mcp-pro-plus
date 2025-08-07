@@ -199,9 +199,7 @@ class TextPresentation:
                     "(i.e., more than 8191 bytes)."
                 )
             elif rec.potential_problematic_reason:
-                rec_dict["warning"] = (
-                    f"This index is potentially problematic because it includes a {rec.potential_problematic_reason} column."
-                )
+                rec_dict["warning"] = f"This index is potentially problematic because it includes a {rec.potential_problematic_reason} column."
             recommendations.append(rec_dict)
         return recommendations
 
@@ -239,9 +237,7 @@ class TextPresentation:
                 before_plan = await self.index_tuning.get_explain_plan_with_indexes(query, frozenset())
 
                 # Get plan with all recommended indexes
-                index_configs = frozenset(
-                    IndexDefinition(rec.table, rec.columns, rec.using) for rec in session.recommendations
-                )
+                index_configs = frozenset(IndexDefinition(rec.table, rec.columns, rec.using) for rec in session.recommendations)
                 after_plan = await self.index_tuning.get_explain_plan_with_indexes(query, index_configs)
 
                 # Extract costs from plans
@@ -311,7 +307,7 @@ class TextPresentation:
                 # Individual benefit
                 individual_benefit = rec.get("benefit_of_this_index_only", {})
                 if individual_benefit:
-                    output.append(f"   Individual Benefit:")
+                    output.append("   Individual Benefit:")
                     output.append(f"     • Improvement: {individual_benefit.get('improvement_multiple', 'N/A')}x")
                     output.append(f"     • Base Cost: {individual_benefit.get('base_cost', 'N/A')}")
                     output.append(f"     • New Cost: {individual_benefit.get('new_cost', 'N/A')}")
@@ -319,7 +315,7 @@ class TextPresentation:
                 # Progressive benefit
                 progressive_benefit = rec.get("benefit_after_previous_indexes", {})
                 if progressive_benefit:
-                    output.append(f"   Progressive Benefit (after previous indexes):")
+                    output.append("   Progressive Benefit (after previous indexes):")
                     output.append(f"     • Improvement: {progressive_benefit.get('improvement_multiple', 'N/A')}x")
                     output.append(f"     • Base Cost: {progressive_benefit.get('base_cost', 'N/A')}")
                     output.append(f"     • New Cost: {progressive_benefit.get('new_cost', 'N/A')}")
@@ -350,14 +346,14 @@ class TextPresentation:
                         query_preview = "\n".join(query_lines[:3]) + "\n..."
                     else:
                         query_preview = query
-                    output.append(f"   Query Preview:")
-                    output.append(f"   ```sql")
+                    output.append("   Query Preview:")
+                    output.append("   ```sql")
                     output.append(f"   {query_preview}")
-                    output.append(f"   ```")
+                    output.append("   ```")
 
                 # Explain plan diff (if available)
                 if impact.get("explain_plan_diff"):
-                    output.append(f"   Explain Plan Difference:")
+                    output.append("   Explain Plan Difference:")
                     output.append(f"   {impact['explain_plan_diff']}")
 
                 output.append("")

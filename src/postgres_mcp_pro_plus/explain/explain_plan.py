@@ -1,5 +1,3 @@
-# ruff: noqa: E501
-
 from __future__ import annotations
 
 import logging
@@ -108,9 +106,7 @@ class ExplainPlanTool:
                 if not isinstance(idx["columns"], list):
                     # Try to convert to list if it's not already
                     try:
-                        idx["columns"] = (
-                            list(idx["columns"]) if hasattr(idx["columns"], "__iter__") else [idx["columns"]]
-                        )
+                        idx["columns"] = list(idx["columns"]) if hasattr(idx["columns"], "__iter__") else [idx["columns"]]
                     except Exception as e:
                         return ErrorResult(f"Expected list for 'columns', got {type(idx['columns'])}: {e}")
 
@@ -128,9 +124,7 @@ class ExplainPlanTool:
             modified_sql_query, use_generic_plan = await self.replace_query_parameters_if_needed(sql_query)
 
             # Generate the explain plan using the static method
-            plan_data = await self.generate_explain_plan_with_hypothetical_indexes(
-                modified_sql_query, indexes, use_generic_plan
-            )
+            plan_data = await self.generate_explain_plan_with_hypothetical_indexes(modified_sql_query, indexes, use_generic_plan)
 
             # Check if we got a valid plan
             if not plan_data or not isinstance(plan_data, dict) or "Plan" not in plan_data:
@@ -154,9 +148,7 @@ class ExplainPlanTool:
         """Check if a query contains LIKE expressions, which don't work with GENERIC_PLAN."""
         return bool(re.search(r"\bLIKE\b", query, re.IGNORECASE))
 
-    async def _run_explain_query(
-        self, query: str, analyze: bool = False, generic_plan: bool = False
-    ) -> ExplainPlanArtifact | ErrorResult:
+    async def _run_explain_query(self, query: str, analyze: bool = False, generic_plan: bool = False) -> ExplainPlanArtifact | ErrorResult:
         try:
             explain_options = ["FORMAT JSON"]
             if analyze:
@@ -179,9 +171,7 @@ class ExplainPlanTool:
 
             plan_dict = query_plan_data[0]
             if not isinstance(plan_dict, dict):
-                return ErrorResult(
-                    f"Expected dict in EXPLAIN result list, got {type(plan_dict)} with value {plan_dict}"
-                )
+                return ErrorResult(f"Expected dict in EXPLAIN result list, got {type(plan_dict)} with value {plan_dict}")
 
             try:
                 return ExplainPlanArtifact.from_json_data(plan_dict)

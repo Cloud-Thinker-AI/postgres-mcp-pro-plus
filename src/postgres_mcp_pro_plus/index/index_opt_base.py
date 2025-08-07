@@ -280,9 +280,7 @@ class IndexTuningBase(ABC):
                 self.dta_trace(f"Workload queries ({len(workload_queries)}): {pp_list(workload_queries)}")
 
                 # Generate and evaluate index recommendations
-                recommendations: tuple[set[IndexRecommendation], float] = await self._generate_recommendations(
-                    query_weights
-                )
+                recommendations: tuple[set[IndexRecommendation], float] = await self._generate_recommendations(query_weights)
                 session.recommendations = await self._format_recommendations(query_weights, recommendations)
 
                 # Reset HypoPG only once at the end
@@ -315,9 +313,7 @@ class IndexTuningBase(ABC):
             return session
 
         # Pre-check 2: Check if ANALYZE has been run at least once
-        result = await self.sql_driver.execute_query(
-            "SELECT s.last_analyze FROM pg_stat_user_tables s ORDER BY s.last_analyze LIMIT 1;"
-        )
+        result = await self.sql_driver.execute_query("SELECT s.last_analyze FROM pg_stat_user_tables s ORDER BY s.last_analyze LIMIT 1;")
         if not result or not any(row.cells.get("last_analyze") is not None for row in result):
             error_message = (
                 "Statistics are not up-to-date. The database needs to be analyzed first. "
@@ -366,9 +362,7 @@ class IndexTuningBase(ABC):
         """Convert query info to weight based on query frequency."""
         return query_info.get("calls", 1.0) * query_info.get("avg_exec_time", 1.0)
 
-    async def get_explain_plan_with_indexes(
-        self, query_text: str, indexes: frozenset[IndexDefinition]
-    ) -> dict[str, Any]:
+    async def get_explain_plan_with_indexes(self, query_text: str, indexes: frozenset[IndexDefinition]) -> dict[str, Any]:
         """
         Get the explain plan for a query with a specific set of indexes.
         Results are memoized to avoid redundant explain operations.
@@ -424,9 +418,7 @@ class IndexTuningBase(ABC):
         # Reference to original implementation
         return await self._get_query_stats_direct(min_calls, min_avg_time_ms, limit)
 
-    async def _get_query_stats_direct(
-        self, min_calls: int = 50, min_avg_time_ms: float = 5.0, limit: int = 100
-    ) -> list[dict[str, Any]]:
+    async def _get_query_stats_direct(self, min_calls: int = 50, min_avg_time_ms: float = 5.0, limit: int = 100) -> list[dict[str, Any]]:
         """Direct implementation of query stats collection."""
         query = """
         SELECT queryid, query, calls, total_exec_time/calls as avg_exec_time
@@ -664,9 +656,7 @@ class IndexTuningBase(ABC):
         """Estimate the size of a table if we can't get it from the database."""
         try:
             # Try a simple query to get row count and then estimate size
-            result = await SafeSqlDriver.execute_param_query(
-                self.sql_driver, "SELECT count(*) as row_count FROM {}", [table]
-            )
+            result = await SafeSqlDriver.execute_param_query(self.sql_driver, "SELECT count(*) as row_count FROM {}", [table])
             if result and len(result) > 0 and len(result[0].cells) > 0:
                 row_count = int(result[0].cells["row_count"])
                 # Rough estimate: assume 1KB per row
@@ -678,8 +668,6 @@ class IndexTuningBase(ABC):
         return 10 * 1024 * 1024  # 10MB default
 
     @abstractmethod
-    async def _generate_recommendations(
-        self, query_weights: list[tuple[str, SelectStmt, float]]
-    ) -> tuple[set[IndexRecommendation], float]:
+    async def _generate_recommendations(self, query_weights: list[tuple[str, SelectStmt, float]]) -> tuple[set[IndexRecommendation], float]:
         """Generate index tuning queries."""
         pass

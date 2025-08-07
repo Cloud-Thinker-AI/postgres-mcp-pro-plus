@@ -3,10 +3,9 @@ from unittest.mock import AsyncMock
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import postgres_mcp.server as server
 import pytest
 import pytest_asyncio
-
-import postgres_mcp.server as server
 
 
 class MockCell:

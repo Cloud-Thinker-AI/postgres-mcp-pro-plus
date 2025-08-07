@@ -2,7 +2,6 @@ import json
 import logging
 
 import pytest
-
 from postgres_mcp.artifacts import ErrorResult
 from postgres_mcp.artifacts import ExplainPlanArtifact
 from postgres_mcp.explain import ExplainPlanTool

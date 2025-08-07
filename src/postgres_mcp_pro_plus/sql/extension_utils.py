@@ -66,9 +66,7 @@ async def get_postgres_version(sql_driver: SqlDriver) -> int:
         raise ValueError("Error determining PostgreSQL version") from e
 
 
-async def check_postgres_version_requirement(
-    sql_driver: SqlDriver, min_version: int, feature_name: str
-) -> tuple[bool, str]:
+async def check_postgres_version_requirement(sql_driver: SqlDriver, min_version: int, feature_name: str) -> tuple[bool, str]:
     """
     Check if the PostgreSQL version meets the minimum requirement.
 
@@ -185,9 +183,7 @@ async def check_extension(
     return result
 
 
-async def check_hypopg_installation_status(
-    sql_driver: SqlDriver, message_type: Literal["plain", "markdown"] = "markdown"
-) -> tuple[bool, str]:
+async def check_hypopg_installation_status(sql_driver: SqlDriver, message_type: Literal["plain", "markdown"] = "markdown") -> tuple[bool, str]:
     """
     Get a detailed status message for the HypoPG extension.
 

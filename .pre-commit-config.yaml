@@ -1,0 +1,78 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  # Basic pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=3072"] # Set limit to 3MB (3072KB)
+      - id: check-toml
+      - id: check-yaml
+        args:
+          - --unsafe
+      - id: end-of-file-fixer
+        exclude: ^frontend/src/client/.*
+      - id: trailing-whitespace
+        exclude: ^frontend/src/client/.*
+      - id: check-merge-conflict
+      - id: check-json
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: forbid-new-submodules
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+
+  # Python code formatting and linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.5
+    hooks:
+      # Run the linter.
+      - id: ruff-check
+        args: [--fix]
+      # Run the formatter.
+      - id: ruff-format
+
+  # Secret detection
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+        exclude: package-lock.json|yarn.lock|.ipynb$|alembic/versions/.*\.py|pnpm-lock.yaml
+
+  # Docker security scanning
+  - repo: https://github.com/hadolint/hadolint
+    rev: v2.13.1-beta
+    hooks:
+      - id: hadolint
+        args: ["--ignore", "DL3008", "--ignore", "DL3013", "--ignore", "DL3018"]
+        files: Dockerfile.*
+
+  # Dependency checking
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.4.2
+    hooks:
+      - id: python-safety-dependencies-check
+        files: ./pyproject.toml
+
+  # Custom hooks
+  - repo: local
+    hooks:
+      - id: check-secrets
+        name: check for secrets
+        entry: ./scripts/security/check-secrets.sh
+        language: script
+        pass_filenames: false
+      - id: bandit-security-scan
+        name: bandit security scan (Docker)
+        entry: ./scripts/security/bandit-docker.sh
+        language: script
+        pass_filenames: false
+        files: \.py$
+      - id: check-dependencies
+        name: check for vulnerable dependencies
+        entry: ./hooks/pre-commit-check-dependencies.sh
+        language: script
+        pass_filenames: false
+        stages: [pre-commit]

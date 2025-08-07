@@ -228,14 +228,10 @@ class BlockingQueriesAnalyzer:
                         "wait_event_type": row.cells["blocked_wait_event_type"],
                         "duration_seconds": duration,
                         "state_duration_seconds": (
-                            float(row.cells["blocked_state_duration_seconds"])
-                            if row.cells["blocked_state_duration_seconds"]
-                            else 0
+                            float(row.cells["blocked_state_duration_seconds"]) if row.cells["blocked_state_duration_seconds"] else 0
                         ),
                         "wait_duration_seconds": (
-                            float(row.cells["blocked_wait_duration_seconds"])
-                            if row.cells["blocked_wait_duration_seconds"]
-                            else 0
+                            float(row.cells["blocked_wait_duration_seconds"]) if row.cells["blocked_wait_duration_seconds"] else 0
                         ),
                         "query": row.cells["blocked_query"],
                         "backend_start": row.cells["blocked_backend_start"],
@@ -248,9 +244,7 @@ class BlockingQueriesAnalyzer:
                         "client_addr": row.cells["blocking_client_addr"],
                         "state": row.cells["blocking_state"],
                         "query_start": row.cells["blocking_query_start"],
-                        "duration_seconds": float(row.cells["blocking_duration_seconds"])
-                        if row.cells["blocking_duration_seconds"]
-                        else 0,
+                        "duration_seconds": float(row.cells["blocking_duration_seconds"]) if row.cells["blocking_duration_seconds"] else 0,
                         "query": row.cells["blocking_query"],
                         "backend_start": row.cells["blocking_backend_start"],
                         "xact_start": row.cells["blocking_xact_start"],
@@ -318,8 +312,7 @@ class BlockingQueriesAnalyzer:
                             "application": process_info.get("application", "unknown"),
                             "state": process_info.get("state", "unknown"),
                             "duration": process_info.get("duration_seconds", 0),
-                            "is_blocker": pid
-                            in [b["blocking_process"]["pid"] for b in blocking_data if b["blocking_process"]["pid"]],
+                            "is_blocker": pid in [b["blocking_process"]["pid"] for b in blocking_data if b["blocking_process"]["pid"]],
                             "is_blocked": pid in [b["blocked_process"]["pid"] for b in blocking_data],
                         }
                     )
@@ -512,9 +505,7 @@ class BlockingQueriesAnalyzer:
             logger.error(f"Error detecting potential deadlocks: {e}")
             return []
 
-    async def _generate_session_termination_recommendations(
-        self, blocking_data: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
+    async def _generate_session_termination_recommendations(self, blocking_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Generate recommendations for which sessions to terminate to resolve blocking."""
         recommendations = []
 
@@ -697,13 +688,9 @@ class BlockingQueriesAnalyzer:
                             "user": row.cells["usename"],
                             "application": row.cells["application_name"],
                             "state": row.cells["state"],
-                            "session_duration": float(row.cells["session_duration"])
-                            if row.cells["session_duration"]
-                            else 0,
+                            "session_duration": float(row.cells["session_duration"]) if row.cells["session_duration"] else 0,
                             "query_duration": float(row.cells["query_duration"]) if row.cells["query_duration"] else 0,
-                            "transaction_duration": float(row.cells["transaction_duration"])
-                            if row.cells["transaction_duration"]
-                            else 0,
+                            "transaction_duration": float(row.cells["transaction_duration"]) if row.cells["transaction_duration"] else 0,
                             "query": row.cells["query"],
                         }
                     )
@@ -712,9 +699,7 @@ class BlockingQueriesAnalyzer:
                 "long_running_sessions": long_running_sessions,
                 "analysis": {
                     "total_long_running": len(long_running_sessions),
-                    "potential_blocking_sources": [
-                        s for s in long_running_sessions if s["transaction_duration"] > 1800
-                    ],
+                    "potential_blocking_sources": [s for s in long_running_sessions if s["transaction_duration"] > 1800],
                     "recommendations": [
                         "Monitor these long-running sessions as potential blocking sources",
                         "Consider implementing connection pooling to limit session duration",
@@ -797,9 +782,7 @@ class BlockingQueriesAnalyzer:
                         }
 
                     query_patterns[normalized_query]["count"] += 1
-                    query_patterns[normalized_query]["total_blocking_time"] += block["blocking_process"][
-                        "duration_seconds"
-                    ]
+                    query_patterns[normalized_query]["total_blocking_time"] += block["blocking_process"]["duration_seconds"]
                     query_patterns[normalized_query]["affected_sessions"].append(block["blocked_process"]["pid"])
 
             # Sort by impact (count * average blocking time)
@@ -819,9 +802,7 @@ class BlockingQueriesAnalyzer:
                         "frequency": data["count"],
                         "average_blocking_time": avg_blocking_time,
                         "total_impact": data["total_blocking_time"],
-                        "example_query": data["example_query"][:200] + "..."
-                        if len(data["example_query"]) > 200
-                        else data["example_query"],
+                        "example_query": data["example_query"][:200] + "..." if len(data["example_query"]) > 200 else data["example_query"],
                     }
                 )
 
@@ -1059,8 +1040,7 @@ class BlockingQueriesAnalyzer:
             recommendations.append("\n🔍 QUERY PATTERN ANALYSIS:")
             for pattern in query_pattern_analysis["problematic_patterns"][:2]:  # Top 2 patterns
                 recommendations.append(
-                    f"   • Optimize pattern with {pattern['frequency']} occurrences "
-                    f"(avg blocking: {pattern['average_blocking_time']:.1f}s)"
+                    f"   • Optimize pattern with {pattern['frequency']} occurrences (avg blocking: {pattern['average_blocking_time']:.1f}s)"
                 )
 
         # Add lock escalation recommendations
@@ -1071,9 +1051,7 @@ class BlockingQueriesAnalyzer:
         # Add historical analysis insights
         if historical_analysis.get("analysis", {}).get("potential_blocking_sources"):
             recommendations.append("\n📊 HISTORICAL ANALYSIS:")
-            recommendations.append(
-                f"   • {len(historical_analysis['analysis']['potential_blocking_sources'])} long-running sessions detected"
-            )
+            recommendations.append(f"   • {len(historical_analysis['analysis']['potential_blocking_sources'])} long-running sessions detected")
 
         return recommendations
 
@@ -1155,8 +1133,7 @@ class BlockingQueriesAnalyzer:
             )
         elif summary["max_wait_time_seconds"] > 60:  # 1 minute
             recommendations.append(
-                f"⚠️ WARNING: Queries blocked for {summary['max_wait_time_seconds']:.1f} seconds. "
-                "Monitor closely and consider intervention."
+                f"⚠️ WARNING: Queries blocked for {summary['max_wait_time_seconds']:.1f} seconds. Monitor closely and consider intervention."
             )
 
         if summary["total_blocked"] > 10:
@@ -1181,8 +1158,7 @@ class BlockingQueriesAnalyzer:
 
         if "relation" in lock_types:
             recommendations.append(
-                "💡 OPTIMIZATION: Table-level locks detected. "
-                "Review queries for table scans and consider adding appropriate indexes."
+                "💡 OPTIMIZATION: Table-level locks detected. Review queries for table scans and consider adding appropriate indexes."
             )
 
         # Check for same relations being blocked multiple times
@@ -1201,8 +1177,7 @@ class BlockingQueriesAnalyzer:
 
         if "Lock" in wait_events:
             recommendations.append(
-                "🔒 LOCK ANALYSIS: High lock contention detected. "
-                "Consider query optimization, index tuning, or connection pooling."
+                "🔒 LOCK ANALYSIS: High lock contention detected. Consider query optimization, index tuning, or connection pooling."
             )
 
         if not recommendations:
@@ -1276,7 +1251,7 @@ class BlockingQueriesAnalyzer:
 
                 # Blocking process
                 if blocking_proc.get("pid"):
-                    output.append(f"\n   BLOCKING PROCESS:")
+                    output.append("\n   BLOCKING PROCESS:")
                     output.append(f"   └─ PID: {blocking_proc.get('pid', 'N/A')}")
                     output.append(f"   └─ User: {blocking_proc.get('user', 'N/A')}")
                     output.append(f"   └─ Application: {blocking_proc.get('application', 'N/A')}")
@@ -1286,14 +1261,12 @@ class BlockingQueriesAnalyzer:
                     # Blocking query (truncated)
                     blocking_query = blocking_proc.get("query", "")
                     if blocking_query:
-                        blocking_query_truncated = (
-                            blocking_query[:100] + "..." if len(blocking_query) > 100 else blocking_query
-                        )
+                        blocking_query_truncated = blocking_query[:100] + "..." if len(blocking_query) > 100 else blocking_query
                         output.append(f"   └─ Query: {blocking_query_truncated}")
 
                 # Lock information
                 if lock_info:
-                    output.append(f"\n   LOCK INFORMATION:")
+                    output.append("\n   LOCK INFORMATION:")
                     if lock_info.get("types"):
                         output.append(f"   └─ Lock Types: {lock_info.get('types', 'N/A')}")
                     if lock_info.get("modes"):
@@ -1307,7 +1280,7 @@ class BlockingQueriesAnalyzer:
                 hierarchy = block.get("blocking_hierarchy", {})
                 all_blocking_pids = hierarchy.get("all_blocking_pids", [])
                 if all_blocking_pids and len(all_blocking_pids) > 1:
-                    output.append(f"\n   BLOCKING HIERARCHY:")
+                    output.append("\n   BLOCKING HIERARCHY:")
                     output.append(f"   └─ All Blocking PIDs: {', '.join(map(str, all_blocking_pids))}")
                     output.append(f"   └─ Immediate Blocker: {hierarchy.get('immediate_blocker', 'N/A')}")
 

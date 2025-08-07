@@ -66,9 +66,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
         return elapsed > self.max_runtime_seconds
 
     @override
-    async def _generate_recommendations(
-        self, query_weights: list[tuple[str, SelectStmt, float]]
-    ) -> tuple[set[IndexRecommendation], float]:
+    async def _generate_recommendations(self, query_weights: list[tuple[str, SelectStmt, float]]) -> tuple[set[IndexRecommendation], float]:
         """Generate index recommendations using a hybrid 'seed + greedy' approach with a time cutoff."""
 
         # Get existing indexes
@@ -116,9 +114,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
                     for c in all_candidates
                 }
             )
-            final_indexes, final_cost = await self._enumerate_greedy(
-                query_weights, seed.copy(), current_cost, candidate_indexes - seed
-            )
+            final_indexes, final_cost = await self._enumerate_greedy(query_weights, seed.copy(), current_cost, candidate_indexes - seed)
 
             if final_cost < best_config[1]:
                 best_config = (final_indexes, final_cost)
@@ -126,9 +122,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
         # Sort recs by benefit desc
         return best_config
 
-    async def generate_candidates(
-        self, workload: list[tuple[str, SelectStmt, float]], existing_defs: set[str]
-    ) -> list[IndexRecommendation]:
+    async def generate_candidates(self, workload: list[tuple[str, SelectStmt, float]], existing_defs: set[str]) -> list[IndexRecommendation]:
         """Generates index candidates from queries, with batch creation."""
         table_columns_usage = {}  # table -> {col -> usage_count}
         # Extract columns from all queries
@@ -232,11 +226,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
         # Total space is base relation plus indexes
         current_space = base_relation_size + indexes_size
         current_time = current_cost
-        current_objective = (
-            math.log(current_time) + alpha * math.log(current_space)
-            if current_cost > 0 and current_space > 0
-            else float("inf")
-        )
+        current_objective = math.log(current_time) + alpha * math.log(current_space) if current_cost > 0 and current_space > 0 else float("inf")
 
         self.dta_trace(
             f"  - Initial configuration: Time={current_time:.2f}, "
@@ -275,9 +265,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
                     continue
 
                 # Calculate new time (cost) with this index
-                test_time = await self._evaluate_configuration_cost(
-                    queries, frozenset(idx.index_definition for idx in current_indexes | {candidate})
-                )
+                test_time = await self._evaluate_configuration_cost(queries, frozenset(idx.index_definition for idx in current_indexes | {candidate}))
                 self.dta_trace(f"    + Eval cost (time): {test_time}")
 
                 # Calculate relative time improvement
@@ -285,9 +273,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
 
                 # Skip if time improvement is below threshold
                 if time_improvement < min_time_improvement:
-                    self.dta_trace(
-                        f"  - Skipping candidate: {candidate_str([candidate])} because time improvement is below threshold"
-                    )
+                    self.dta_trace(f"  - Skipping candidate: {candidate_str([candidate])} because time improvement is below threshold")
                     continue
 
                 # Calculate objective for this configuration
@@ -302,9 +288,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
                     best_objective = test_objective
                     best_time_improvement = time_improvement
                 else:
-                    self.dta_trace(
-                        f"  - Skipping candidate: {candidate_str([candidate])} because it doesn't have the best objective improvement"
-                    )
+                    self.dta_trace(f"  - Skipping candidate: {candidate_str([candidate])} because it doesn't have the best objective improvement")
 
             # If no improvement or no valid candidates, stop
             if best_index is None:
@@ -344,9 +328,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
         # Log final configuration
         self.dta_trace("\n[SEARCH COMPLETE]")
         if added_indexes:
-            indexes_size = sum(
-                [await self._estimate_index_size(idx.table, list(idx.columns)) for idx in current_indexes]
-            )
+            indexes_size = sum([await self._estimate_index_size(idx.table, list(idx.columns)) for idx in current_indexes])
             self.dta_trace(
                 f"  - Final configuration: {len(added_indexes)} indexes added"
                 f"\n    + Final time: {current_time:.2f}"
@@ -399,9 +381,7 @@ class DatabaseTuningAdvisor(IndexTuningBase):
 
         return filtered_candidates
 
-    async def _filter_long_text_columns(
-        self, candidates: list[IndexRecommendation], max_text_length: int = 100
-    ) -> list[IndexRecommendation]:
+    async def _filter_long_text_columns(self, candidates: list[IndexRecommendation], max_text_length: int = 100) -> list[IndexRecommendation]:
         """Filter out indexes that contain long text columns based on catalog information.
 
         Args:

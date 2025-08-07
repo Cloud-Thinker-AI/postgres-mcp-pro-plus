@@ -18,4 +18,4 @@ RUN git clone --depth 1 https://github.com/HypoPG/hypopg.git /tmp/hypopg \
 
 # Add initialization script to create extensions in template1
 RUN echo "CREATE EXTENSION IF NOT EXISTS pg_stat_statements; CREATE EXTENSION IF NOT EXISTS hypopg;" \
-  > /docker-entrypoint-initdb.d/00-create-extensions.sql 
+  > /docker-entrypoint-initdb.d/00-create-extensions.sql

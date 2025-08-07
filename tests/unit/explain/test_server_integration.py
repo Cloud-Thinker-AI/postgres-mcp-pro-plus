@@ -5,7 +5,6 @@ from unittest.mock import patch
 
 import pytest
 import pytest_asyncio
-
 from postgres_mcp.server import explain_query
 
 

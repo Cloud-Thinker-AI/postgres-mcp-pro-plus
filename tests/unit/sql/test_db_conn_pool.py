@@ -4,7 +4,6 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
-
 from postgres_mcp.sql.sql_driver import DbConnPool
 
 

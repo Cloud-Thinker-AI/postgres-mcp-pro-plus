@@ -185,9 +185,7 @@ class SchemaMappingTool:
                             "to_table": target_node.name,
                             "from_qualified": table_name,
                             "to_qualified": target_table,
-                            "relationship_type": "cross_schema"
-                            if table_node.schema != target_node.schema
-                            else "intra_schema",
+                            "relationship_type": "cross_schema" if table_node.schema != target_node.schema else "intra_schema",
                         }
 
                         if table_node.schema != target_node.schema:
@@ -316,9 +314,7 @@ class SchemaMappingTool:
             cross_schema_patterns[pattern] += 1
 
         patterns["cross_schema_patterns"] = dict(cross_schema_patterns)
-        patterns["most_common_cross_schema"] = (
-            max(cross_schema_patterns.items(), key=lambda x: x[1]) if cross_schema_patterns else None
-        )
+        patterns["most_common_cross_schema"] = max(cross_schema_patterns.items(), key=lambda x: x[1]) if cross_schema_patterns else None
 
         # Analyze schema coupling
         schema_coupling = {}
@@ -644,13 +640,11 @@ class SchemaMappingTool:
             # Schema metrics
             schema_metrics = schema_analysis.get("schema_metrics", [])
             if schema_metrics:
-                output.append(f"\n📋 Schema Metrics:")
+                output.append("\n📋 Schema Metrics:")
                 for i, schema in enumerate(schema_metrics[:5], 1):
                     coupling_level = self._get_coupling_display(schema)
                     output.append(f"  {i}. {schema['schema']} - {coupling_level}")
-                    output.append(
-                        f"     Tables: {schema['table_count']}, Size: {self._format_bytes(schema['total_size_bytes'])}"
-                    )
+                    output.append(f"     Tables: {schema['table_count']}, Size: {self._format_bytes(schema['total_size_bytes'])}")
 
                     if schema["outgoing_dependencies"]:
                         output.append(f"     → Depends on: {', '.join(schema['outgoing_dependencies'])}")
@@ -660,7 +654,7 @@ class SchemaMappingTool:
             # Dependency chains
             dependency_chains = schema_analysis.get("dependency_chains", [])
             if dependency_chains:
-                output.append(f"\n🔗 Dependency Chains:")
+                output.append("\n🔗 Dependency Chains:")
                 for i, chain in enumerate(dependency_chains[:5], 1):
                     output.append(f"  {i}. {' → '.join(chain)}")
 
@@ -684,7 +678,7 @@ class SchemaMappingTool:
             # Hub tables
             hub_tables = table_analysis.get("hub_tables", [])
             if hub_tables:
-                output.append(f"\n🎯 Hub Tables (Highly Referenced):")
+                output.append("\n🎯 Hub Tables (Highly Referenced):")
                 for i, table in enumerate(hub_tables[:5], 1):
                     output.append(f"  {i}. {table['qualified_name']} - {table['incoming_fks']} incoming FKs")
                     output.append(f"     Size: {self._format_bytes(table['size_bytes'])}, Rows: {table['row_count']:,}")
@@ -692,12 +686,12 @@ class SchemaMappingTool:
             # Isolated tables
             isolated_tables = table_analysis.get("isolated_tables", [])
             if isolated_tables:
-                output.append(f"\n🏝️  Isolated Tables (No FKs):")
+                output.append("\n🏝️  Isolated Tables (No FKs):")
                 isolated_count = len(isolated_tables)
                 output.append(f"  Total: {isolated_count} tables")
 
                 if isolated_count > 0:
-                    output.append(f"  Largest isolated tables:")
+                    output.append("  Largest isolated tables:")
                     for i, table in enumerate(isolated_tables[:5], 1):
                         output.append(f"    {i}. {table['qualified_name']} - {self._format_bytes(table['size_bytes'])}")
 
@@ -716,14 +710,12 @@ class SchemaMappingTool:
             # Most common cross-schema pattern
             most_common = relationship_patterns.get("most_common_cross_schema")
             if most_common:
-                output.append(
-                    f"\n🔝 Most Common Cross-Schema Pattern: {most_common[0]} ({most_common[1]} relationships)"
-                )
+                output.append(f"\n🔝 Most Common Cross-Schema Pattern: {most_common[0]} ({most_common[1]} relationships)")
 
             # Schema coupling analysis
             schema_coupling = relationship_patterns.get("schema_coupling", {})
             if schema_coupling:
-                output.append(f"\n📊 Schema Coupling Analysis:")
+                output.append("\n📊 Schema Coupling Analysis:")
 
                 # Sort by coupling ratio
                 sorted_coupling = sorted(schema_coupling.items(), key=lambda x: x[1]["coupling_ratio"], reverse=True)
@@ -735,9 +727,7 @@ class SchemaMappingTool:
 
                     level_emoji = {"isolated": "🏝️", "low": "🟢", "medium": "🟡", "high": "🔴"}.get(level, "⚪")
 
-                    output.append(
-                        f"  {level_emoji} {schema}: {level.upper()} coupling (ratio: {ratio:.2f}, external refs: {external_refs})"
-                    )
+                    output.append(f"  {level_emoji} {schema}: {level.upper()} coupling (ratio: {ratio:.2f}, external refs: {external_refs})")
 
             output.append("")
 
@@ -759,13 +749,13 @@ class SchemaMappingTool:
                     output.append(f"    💡 {rec['suggestion']}")
 
             if optimizations:
-                output.append(f"\n🔧 Optimizations:")
+                output.append("\n🔧 Optimizations:")
                 for rec in optimizations:
                     output.append(f"  • {rec['message']}")
                     output.append(f"    💡 {rec['suggestion']}")
 
             if info:
-                output.append(f"\nℹ️  Information:")
+                output.append("\nℹ️  Information:")
                 for rec in info:
                     output.append(f"  • {rec['message']}")
                     output.append(f"    💡 {rec['suggestion']}")
