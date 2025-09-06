@@ -1128,19 +1128,15 @@ class BlockingQueriesAnalyzer:
 
         if summary["max_wait_time_seconds"] > 300:  # 5 minutes
             recommendations.append(
-                f"🚨 CRITICAL: Queries have been blocked for {summary['max_wait_time_seconds']:.1f} seconds. "
-                "Consider terminating long-running blocking queries."
+                f"CRITICAL: Queries blocked for {summary['max_wait_time_seconds']:.1f}s. Consider terminating long-running blockers."
             )
         elif summary["max_wait_time_seconds"] > 60:  # 1 minute
             recommendations.append(
-                f"⚠️ WARNING: Queries blocked for {summary['max_wait_time_seconds']:.1f} seconds. Monitor closely and consider intervention."
+                f"WARNING: Queries blocked for {summary['max_wait_time_seconds']:.1f}s. Monitor closely and consider intervention."
             )
 
         if summary["total_blocked"] > 10:
-            recommendations.append(
-                f"🚨 HIGH CONTENTION: {summary['total_blocked']} queries are blocked. "
-                "This indicates high lock contention - review query patterns and indexing."
-            )
+            recommendations.append(f"HIGH CONTENTION: {summary['total_blocked']} queries are blocked. Review query patterns and indexing.")
 
         # Analyze lock types and patterns from the improved lock_info structure
         lock_types = {}
@@ -1152,21 +1148,15 @@ class BlockingQueriesAnalyzer:
 
         if "transactionid" in lock_types and lock_types["transactionid"] > 3:
             recommendations.append(
-                "💡 OPTIMIZATION: Multiple transaction ID locks detected. "
-                "Consider shortening transaction duration and avoiding long-running transactions."
+                "OPTIMIZATION: Multiple transaction ID locks detected. Shorten transaction duration and avoid long-running transactions."
             )
 
         if "relation" in lock_types:
-            recommendations.append(
-                "💡 OPTIMIZATION: Table-level locks detected. Review queries for table scans and consider adding appropriate indexes."
-            )
+            recommendations.append("OPTIMIZATION: Table-level locks detected. Review queries for table scans and consider appropriate indexes.")
 
         # Check for same relations being blocked multiple times
         if len(summary["affected_relations"]) < summary["total_blocked"] / 2:
-            recommendations.append(
-                "🎯 HOTSPOT: Multiple queries are contending for the same tables. "
-                "Focus optimization efforts on these hot tables: " + ", ".join(summary["affected_relations"])
-            )
+            recommendations.append("HOTSPOT: Multiple queries contend for the same tables: " + ", ".join(summary["affected_relations"]))
 
         # Add recommendations based on wait events
         wait_events = {}
@@ -1176,22 +1166,16 @@ class BlockingQueriesAnalyzer:
                 wait_events[wait_event] = wait_events.get(wait_event, 0) + 1
 
         if "Lock" in wait_events:
-            recommendations.append(
-                "🔒 LOCK ANALYSIS: High lock contention detected. Consider query optimization, index tuning, or connection pooling."
-            )
+            recommendations.append("LOCK ANALYSIS: High lock contention detected. Consider query optimization, index tuning, or connection pooling.")
 
         if not recommendations:
-            recommendations.append("✅ Current blocking situation appears manageable. Monitor for patterns and trends.")
+            recommendations.append("Status OK: Current blocking appears manageable. Monitor for patterns and trends.")
 
         return recommendations
 
     def _format_as_text(self, result: Dict[str, Any]) -> str:
-        """Format blocking queries analysis result as human-readable text."""
-        output = []
-
-        # Header
-        output.append("🔒 BLOCKING QUERIES ANALYSIS")
-        output.append("=" * 50)
+        """Format blocking queries analysis as compact text (no emojis)."""
+        out: list[str] = []
 
         status = result.get("status", "unknown")
         summary = result.get("summary", {})
@@ -1200,114 +1184,75 @@ class BlockingQueriesAnalyzer:
 
         # Status and Summary
         if status == "healthy":
-            output.append("✅ STATUS: HEALTHY")
-            output.append(result.get("message", "No blocking queries detected"))
-            output.append("")
+            out.append("Status: healthy")
+            out.append(result.get("message", "No blocking queries detected"))
         else:
-            output.append("⚠️ STATUS: BLOCKING DETECTED")
-            output.append("")
+            line = (
+                "Status: blocking_detected "
+                f"blocked={summary.get('total_blocked', 0)} "
+                f"blocking={summary.get('total_blocking', 0)} "
+                f"max_wait={summary.get('max_wait_time_seconds', 0):.1f}s"
+            )
+            out.append(line)
+            if summary.get("affected_relations"):
+                out.append("Affected: " + ", ".join(summary.get("affected_relations", [])))
+            if summary.get("analysis_timestamp"):
+                out.append(f"Time: {summary.get('analysis_timestamp')}")
 
-            # Summary statistics
-            output.append("📊 SUMMARY")
-            output.append("-" * 30)
-            output.append(f"Total Blocked Queries: {summary.get('total_blocked', 0)}")
-            output.append(f"Total Blocking Queries: {summary.get('total_blocking', 0)}")
-            output.append(f"Max Wait Time: {summary.get('max_wait_time_seconds', 0):.1f} seconds")
-
-            affected_relations = summary.get("affected_relations", [])
-            if affected_relations:
-                output.append(f"Affected Relations: {', '.join(affected_relations)}")
-
-            analysis_timestamp = summary.get("analysis_timestamp", "")
-            if analysis_timestamp:
-                output.append(f"Analysis Time: {analysis_timestamp}")
-
-            output.append("")
-
-        # Blocking queries details
+        # Blocking queries details (condensed)
         if blocking_queries:
-            output.append("🚫 BLOCKING QUERIES DETAILS")
-            output.append("-" * 40)
-
             for i, block in enumerate(blocking_queries, 1):
-                blocked_proc = block.get("blocked_process", {})
-                blocking_proc = block.get("blocking_process", {})
-                lock_info = block.get("lock_info", {})
+                bp = block.get("blocked_process", {})
+                bl = block.get("blocking_process", {})
+                li = block.get("lock_info", {})
 
-                output.append(f"\n{i}. BLOCKED QUERY:")
-                output.append(f"   PID: {blocked_proc.get('pid', 'N/A')}")
-                output.append(f"   User: {blocked_proc.get('user', 'N/A')}")
-                output.append(f"   Application: {blocked_proc.get('application', 'N/A')}")
-                output.append(f"   State: {blocked_proc.get('state', 'N/A')}")
-                output.append(f"   Wait Duration: {blocked_proc.get('duration_seconds', 0):.1f} seconds")
-                output.append(f"   Wait Event: {blocked_proc.get('wait_event', 'N/A')}")
-                output.append(f"   Wait Event Type: {blocked_proc.get('wait_event_type', 'N/A')}")
-
-                # Query (truncated for readability)
-                query = blocked_proc.get("query", "")
-                if query:
-                    query_truncated = query[:100] + "..." if len(query) > 100 else query
-                    output.append(f"   Query: {query_truncated}")
+                # Blocked line
+                q = bp.get("query", "") or ""
+                q = (q[:100] + "...") if len(q) > 100 else q
+                out.append(
+                    f"{i}. Blocked pid={bp.get('pid', 'NA')} user={bp.get('user', 'NA')} app={bp.get('application', 'NA')} "
+                    f"state={bp.get('state', 'NA')} wait={bp.get('duration_seconds', 0):.1f}s event={bp.get('wait_event', 'NA')} type={bp.get('wait_event_type', 'NA')}"
+                )
+                if q:
+                    out.append("   q: " + q)
 
                 # Blocking process
-                if blocking_proc.get("pid"):
-                    output.append("\n   BLOCKING PROCESS:")
-                    output.append(f"   └─ PID: {blocking_proc.get('pid', 'N/A')}")
-                    output.append(f"   └─ User: {blocking_proc.get('user', 'N/A')}")
-                    output.append(f"   └─ Application: {blocking_proc.get('application', 'N/A')}")
-                    output.append(f"   └─ State: {blocking_proc.get('state', 'N/A')}")
-                    output.append(f"   └─ Duration: {blocking_proc.get('duration_seconds', 0):.1f} seconds")
+                if bl.get("pid"):
+                    bq = bl.get("query", "") or ""
+                    bq = (bq[:100] + "...") if len(bq) > 100 else bq
+                    out.append(
+                        f"   Blocking pid={bl.get('pid', 'NA')} user={bl.get('user', 'NA')} state={bl.get('state', 'NA')} dur={bl.get('duration_seconds', 0):.1f}s"
+                    )
+                    if bq:
+                        out.append("   bq: " + bq)
 
-                    # Blocking query (truncated)
-                    blocking_query = blocking_proc.get("query", "")
-                    if blocking_query:
-                        blocking_query_truncated = blocking_query[:100] + "..." if len(blocking_query) > 100 else blocking_query
-                        output.append(f"   └─ Query: {blocking_query_truncated}")
-
-                # Lock information
-                if lock_info:
-                    output.append("\n   LOCK INFORMATION:")
-                    if lock_info.get("types"):
-                        output.append(f"   └─ Lock Types: {lock_info.get('types', 'N/A')}")
-                    if lock_info.get("modes"):
-                        output.append(f"   └─ Lock Modes: {lock_info.get('modes', 'N/A')}")
-                    if lock_info.get("count"):
-                        output.append(f"   └─ Lock Count: {lock_info.get('count', 'N/A')}")
-                    if lock_info.get("affected_relations"):
-                        output.append(f"   └─ Affected Relations: {lock_info.get('affected_relations', 'N/A')}")
+                # Locks
+                if li:
+                    parts = []
+                    if li.get("types"):
+                        parts.append(f"types={li.get('types')}")
+                    if li.get("modes"):
+                        parts.append(f"modes={li.get('modes')}")
+                    if li.get("count"):
+                        parts.append(f"count={li.get('count')}")
+                    if li.get("affected_relations"):
+                        parts.append(f"rels={li.get('affected_relations')}")
+                    if parts:
+                        out.append("   Locks: " + "; ".join(parts))
 
                 # Blocking hierarchy
-                hierarchy = block.get("blocking_hierarchy", {})
-                all_blocking_pids = hierarchy.get("all_blocking_pids", [])
-                if all_blocking_pids and len(all_blocking_pids) > 1:
-                    output.append("\n   BLOCKING HIERARCHY:")
-                    output.append(f"   └─ All Blocking PIDs: {', '.join(map(str, all_blocking_pids))}")
-                    output.append(f"   └─ Immediate Blocker: {hierarchy.get('immediate_blocker', 'N/A')}")
+                hier = block.get("blocking_hierarchy", {})
+                pids = hier.get("all_blocking_pids", [])
+                if pids and len(pids) > 1:
+                    out.append(f"   Hier: all=[{', '.join(map(str, pids))}] immediate={hier.get('immediate_blocker', 'NA')}")
 
-                output.append("")
-
-        # Recommendations
+        # Recommendations (single line list)
         if recommendations:
-            output.append("💡 RECOMMENDATIONS")
-            output.append("-" * 30)
-            for i, rec in enumerate(recommendations, 1):
-                output.append(f"{i}. {rec}")
-            output.append("")
+            out.append("Recs: " + " | ".join(recommendations))
 
-        # Additional analysis sections for healthy status
+        # Healthy notes
         if status == "healthy":
-            output.append("📋 SYSTEM STATUS")
-            output.append("-" * 30)
-            output.append("• No blocking queries detected")
-            output.append("• All queries are running without lock contention")
-            output.append("• Database locking system is operating normally")
-            output.append("")
+            out.append("Notes: no blocking; queries running without lock contention; locking normal")
+            out.append("Monitor: watch contention patterns; review performance; enable lock monitoring; check deadlocks logs")
 
-            output.append("🔍 MONITORING SUGGESTIONS")
-            output.append("-" * 30)
-            output.append("• Continue monitoring for lock contention patterns")
-            output.append("• Review query performance regularly")
-            output.append("• Consider enabling lock monitoring if not already active")
-            output.append("• Monitor for deadlocks in PostgreSQL logs")
-
-        return "\n".join(output)
+        return "\n".join(out)

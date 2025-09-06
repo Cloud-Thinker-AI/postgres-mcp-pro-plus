@@ -116,23 +116,22 @@ class ExplainPlanArtifact:
         self.execution_time = execution_time
 
     def to_text(self) -> str:
-        """Convert the explain plan to a text representation.
+        """Convert the explain plan to a compact text representation."""
+        lines: list[str] = []
 
-        Returns:
-            str: A string representation of the execution plan with timing information.
-        """
-        result = []
-
-        # Add timing information if available
+        # Compact timing info if available
+        timing_parts: list[str] = []
         if self.planning_time is not None:
-            result.append(f"Planning Time: {self.planning_time:.3f} ms")
+            timing_parts.append(f"plan={self.planning_time:.3f}ms")
         if self.execution_time is not None:
-            result.append(f"Execution Time: {self.execution_time:.3f} ms")
+            timing_parts.append(f"exec={self.execution_time:.3f}ms")
+        if timing_parts:
+            lines.append("Timing: " + " ".join(timing_parts))
 
-        # Add plan tree representation
-        result.append(self._format_plan_node(self.plan_tree))
+        # Plan tree
+        lines.append(self._format_plan_node(self.plan_tree))
 
-        return "\n".join(result)
+        return "\n".join(lines)
 
     @staticmethod
     def _format_plan_node(node: PlanNode, level: int = 0) -> str:
@@ -146,39 +145,40 @@ class ExplainPlanArtifact:
             str: A formatted string representation of the node and its children
         """
         indent = "  " * level
-        output = f"{indent}→ {node.node_type} (Cost: {node.startup_cost:.2f}..{node.total_cost:.2f})"
+        line = f"{indent}{node.node_type} cost={node.startup_cost:.2f}..{node.total_cost:.2f}"
 
-        # Add table name if present
+        # Relation name if present
         if node.relation_name:
-            output += f" on {node.relation_name}"
+            line += f" rel={node.relation_name}"
 
-        # Add rows information
-        output += f" [Rows: {node.plan_rows}]"
+        # Planned rows
+        line += f" rows={node.plan_rows}"
 
-        # Add actual metrics if available in a compact form
-        if node.actual_total_time is not None:
-            output += (
-                f" [Actual: {node.actual_startup_time:.2f}..{node.actual_total_time:.2f} ms, Rows: {node.actual_rows}, Loops: {node.actual_loops}]"
-            )
+        # Actual metrics if available
+        if node.actual_total_time is not None and node.actual_startup_time is not None:
+            line += f" act={node.actual_startup_time:.2f}..{node.actual_total_time:.2f}ms"
+        if node.actual_rows is not None:
+            line += f" act_rows={node.actual_rows}"
+        if node.actual_loops is not None:
+            line += f" loops={node.actual_loops}"
 
-        # Add filter if present
+        # Filter (truncate long)
         if node.filter:
-            filter_text = node.filter
-            # Truncate long filters for readability
-            if len(filter_text) > 100:
-                filter_text = filter_text[:97] + "..."
-            output += f"\n{indent}  Filter: {filter_text}"
+            filt = node.filter
+            if len(filt) > 100:
+                filt = filt[:97] + "..."
+            line += f" | filter={filt}"
 
-        # Add buffer information if available in a compact form
+        # Buffer info
         if node.shared_hit_blocks is not None:
-            output += f"\n{indent}  Buffers - hit: {node.shared_hit_blocks}, read: {node.shared_read_blocks}, written: {node.shared_written_blocks}"
+            line += f" | buf hit={node.shared_hit_blocks} read={node.shared_read_blocks} written={node.shared_written_blocks}"
 
-        # Recursively format children
+        # Children
         if node.children:
             for child in node.children:
-                output += "\n" + ExplainPlanArtifact._format_plan_node(child, level + 1)
+                line += "\n" + ExplainPlanArtifact._format_plan_node(child, level + 1)
 
-        return output
+        return line
 
     @classmethod
     def from_json_data(cls, plan_data: dict[str, Any]) -> "ExplainPlanArtifact":

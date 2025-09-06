@@ -67,7 +67,7 @@ class TextPresentation:
             String with recommendations or error
         """
         if not queries:
-            return "❌ Error: No queries provided for analysis"
+            return "Error: No queries provided for analysis"
 
         result = await self._execute_analysis(
             query_list=queries,
@@ -269,131 +269,75 @@ class TextPresentation:
         return query_impact
 
     def _format_as_text(self, result: Dict[str, Any]) -> str:
-        """Format index tuning analysis result as human-readable text."""
+        """Format index tuning analysis as compact text (no emojis)."""
         if "error" in result:
-            return f"❌ Error: {result['error']}"
+            return f"Error: {result['error']}"
 
-        output = []
+        out: list[str] = []
 
-        # Header
-        output.append("📊 INDEX TUNING ANALYSIS")
-        output.append("=" * 50)
-
-        # Summary
+        # Summary (single line)
         summary = result.get("summary", {})
         if summary:
-            output.append("📈 SUMMARY")
-            output.append("-" * 30)
-            output.append(f"Total Recommendations: {summary.get('total_recommendations', 0)}")
-            output.append(f"Base Cost: {summary.get('base_cost', 'N/A')}")
-            output.append(f"New Cost: {summary.get('new_cost', 'N/A')}")
-            output.append(f"Performance Improvement: {summary.get('improvement_multiple', 'N/A')}x")
-            output.append(f"Total Index Size: {summary.get('total_size_bytes', 'N/A')}")
-            output.append("")
+            out.append(
+                "Summary: "
+                f"recs={summary.get('total_recommendations', 0)} "
+                f"base={summary.get('base_cost', 'N/A')} "
+                f"new={summary.get('new_cost', 'N/A')} "
+                f"improve={summary.get('improvement_multiple', 'N/A')}x "
+                f"size={summary.get('total_size_bytes', 'N/A')}"
+            )
 
         # Recommendations
         recommendations = result.get("recommendations", [])
         if recommendations:
-            output.append("🎯 INDEX RECOMMENDATIONS")
-            output.append("-" * 40)
-
             for i, rec in enumerate(recommendations, 1):
-                output.append(f"{i}. INDEX ON {rec.get('index_target_table', 'unknown_table')}")
-                output.append(f"   Columns: {', '.join(rec.get('index_target_columns', []))}")
-                output.append(f"   Definition: {rec.get('index_definition', 'N/A')}")
-                output.append(f"   Estimated Size: {rec.get('index_estimated_size', 'N/A')}")
-                output.append(f"   Apply Order: {rec.get('index_apply_order', 'N/A')}")
-
-                # Individual benefit
-                individual_benefit = rec.get("benefit_of_this_index_only", {})
-                if individual_benefit:
-                    output.append("   Individual Benefit:")
-                    output.append(f"     • Improvement: {individual_benefit.get('improvement_multiple', 'N/A')}x")
-                    output.append(f"     • Base Cost: {individual_benefit.get('base_cost', 'N/A')}")
-                    output.append(f"     • New Cost: {individual_benefit.get('new_cost', 'N/A')}")
-
-                # Progressive benefit
-                progressive_benefit = rec.get("benefit_after_previous_indexes", {})
-                if progressive_benefit:
-                    output.append("   Progressive Benefit (after previous indexes):")
-                    output.append(f"     • Improvement: {progressive_benefit.get('improvement_multiple', 'N/A')}x")
-                    output.append(f"     • Base Cost: {progressive_benefit.get('base_cost', 'N/A')}")
-                    output.append(f"     • New Cost: {progressive_benefit.get('new_cost', 'N/A')}")
-
-                # Warnings
+                cols = ",".join(rec.get("index_target_columns", []))
+                out.append(
+                    f"{i}. idx on {rec.get('index_target_table', 'unknown_table')} cols=[{cols}] "
+                    f"def={rec.get('index_definition', 'N/A')} size={rec.get('index_estimated_size', 'N/A')} order={rec.get('index_apply_order', 'N/A')}"
+                )
+                indiv = rec.get("benefit_of_this_index_only", {})
+                if indiv:
+                    out.append(
+                        f"   indiv: {indiv.get('improvement_multiple', 'N/A')}x base={indiv.get('base_cost', 'N/A')} new={indiv.get('new_cost', 'N/A')}"
+                    )
+                prog = rec.get("benefit_after_previous_indexes", {})
+                if prog:
+                    out.append(
+                        f"   prog: {prog.get('improvement_multiple', 'N/A')}x base={prog.get('base_cost', 'N/A')} new={prog.get('new_cost', 'N/A')}"
+                    )
                 if "warning" in rec:
-                    output.append(f"   ⚠️  Warning: {rec['warning']}")
-
-                output.append("")
+                    out.append(f"   warning: {rec['warning']}")
 
         # Query Impact
         query_impact = result.get("query_impact", [])
         if query_impact:
-            output.append("🔍 QUERY IMPACT ANALYSIS")
-            output.append("-" * 40)
-
             for i, impact in enumerate(query_impact, 1):
-                output.append(f"{i}. QUERY ANALYSIS")
-                output.append(f"   Performance Improvement: {impact.get('improvement_multiple', 'N/A')}x")
-                output.append(f"   Base Cost: {impact.get('base_cost', 'N/A')}")
-                output.append(f"   New Cost: {impact.get('new_cost', 'N/A')}")
-
-                # Query (truncated for readability)
+                out.append(
+                    f"Impact{i}: improve={impact.get('improvement_multiple', 'N/A')}x base={impact.get('base_cost', 'N/A')} new={impact.get('new_cost', 'N/A')}"
+                )
                 query = impact.get("query", "")
                 if query:
-                    query_lines = query.strip().split("\n")
-                    if len(query_lines) > 3:
-                        query_preview = "\n".join(query_lines[:3]) + "\n..."
-                    else:
-                        query_preview = query
-                    output.append("   Query Preview:")
-                    output.append("   ```sql")
-                    output.append(f"   {query_preview}")
-                    output.append("   ```")
-
-                # Explain plan diff (if available)
+                    lines = query.strip().split("\n")
+                    preview = " ".join(lines[:1]) if lines else ""
+                    if len(lines) > 1:
+                        preview += " ..."
+                    out.append("   query: " + preview)
                 if impact.get("explain_plan_diff"):
-                    output.append("   Explain Plan Difference:")
-                    output.append(f"   {impact['explain_plan_diff']}")
-
-                output.append("")
+                    out.append("   plan_diff:")
+                    out.append(f"   {impact['explain_plan_diff']}")
 
         # No recommendations case
         if not recommendations:
             if "recommendations" in result and result["recommendations"] == "No index recommendations found.":
-                output.append("ℹ️ ANALYSIS RESULT")
-                output.append("-" * 30)
-                output.append("No index recommendations found.")
-                output.append("")
-                output.append("This could mean:")
-                output.append("• Your queries are already well-optimized")
-                output.append("• Existing indexes are sufficient")
-                output.append("• Query patterns don't benefit from additional indexes")
-                output.append("• No queries met the minimum criteria for analysis")
-                output.append("")
-                output.append("💡 SUGGESTIONS")
-                output.append("-" * 30)
-                output.append("• Review your query patterns and frequency")
-                output.append("• Consider lowering analysis thresholds")
-                output.append("• Check if pg_stat_statements is enabled and has data")
-                output.append("• Analyze specific problematic queries individually")
+                out.append("Analysis: No index recommendations found.")
+                out.append("Hints: queries may be optimized; indexes sufficient; patterns not indexable; or thresholds too high")
 
-        # Performance Tips
+        # Implementation tips summary
         if recommendations:
-            output.append("💡 IMPLEMENTATION TIPS")
-            output.append("-" * 30)
-            output.append("• Apply indexes in the recommended order")
-            output.append("• Test indexes on a staging environment first")
-            output.append("• Monitor index usage after creation")
-            output.append("• Consider maintenance windows for large indexes")
-            output.append("• Use CONCURRENTLY option for minimal downtime")
-            output.append("")
+            out.append("Tips: apply in order; test on staging; monitor usage; schedule maintenance; use CONCURRENTLY for low downtime")
+            examples = [rec.get("index_definition", "N/A") for rec in recommendations[:3]]
+            if examples:
+                out.append("Examples: " + " | ".join(examples) + (f" | +{len(recommendations) - 3} more" if len(recommendations) > 3 else ""))
 
-            output.append("📋 EXAMPLE IMPLEMENTATION")
-            output.append("-" * 30)
-            for i, rec in enumerate(recommendations[:3], 1):  # Show first 3 examples
-                output.append(f"{i}. {rec.get('index_definition', 'N/A')}")
-            if len(recommendations) > 3:
-                output.append(f"   ... and {len(recommendations) - 3} more indexes")
-
-        return "\n".join(output)
+        return "\n".join(out)

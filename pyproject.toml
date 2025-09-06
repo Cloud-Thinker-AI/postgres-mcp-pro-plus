@@ -1,6 +1,6 @@
 [project]
 name = "postgres-mcp-pro-plus"
-version = "0.3.6"
+version = "0.3.7"
 description = "PostgreSQL Tuning and Analysis Tool"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -19,8 +19,12 @@ license = "mit"
 license-files = ["LICENSE"]
 
 [[project.authors]]
-name = "Johann Schleier-Smith + Henry (Duc) Bui"
-emails = ["jssmith@crystal.cloud", "henry.bmduc@gmail.com"]
+name = "Johann Schleier-Smith"
+email = "jssmith@crystal.cloud"
+
+[[project.authors]]
+name = "Henry (Duc) Bui"
+email = "henry.bmduc@gmail.com"
 
 [build-system]
 requires = ["hatchling"]

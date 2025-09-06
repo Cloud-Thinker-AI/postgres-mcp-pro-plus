@@ -14,18 +14,8 @@ logger = logging.getLogger(__name__)
 PG_STAT_STATEMENTS = "pg_stat_statements"
 
 install_pg_stat_statements_message = (
-    "The pg_stat_statements extension is required to "
-    "report slow queries, but it is not currently "
-    "installed.\n\n"
-    "You can install it by running: "
-    "`CREATE EXTENSION pg_stat_statements;`\n\n"
-    "**What does it do?** It records statistics (like "
-    "execution time, number of calls, rows returned) for "
-    "every query executed against the database.\n\n"
-    "**Is it safe?** Installing 'pg_stat_statements' is "
-    "generally safe and a standard practice for performance "
-    "monitoring. It adds overhead by tracking statistics, "
-    "but this is usually negligible unless under extreme load."
+    "pg_stat_statements not installed. Install with: CREATE EXTENSION pg_stat_statements; "
+    "It records per-query stats (time, calls, rows). Safe, standard, low overhead."
 )
 
 
@@ -104,9 +94,17 @@ class TopQueriesCalc:
             else:
                 criteria = "mean execution time per call"
 
-            result = f"Top {len(slow_queries)} slowest queries by {criteria}:\n"
-            result += str(slow_queries)
-            return result
+            lines = [f"Top{len(slow_queries)} by {criteria}:"]
+            for i, q in enumerate(slow_queries[:limit], 1):
+                query_txt = (q.get("query") or "").strip().replace("\n", " ")
+                if len(query_txt) > 120:
+                    query_txt = query_txt[:117] + "..."
+                total = q.get(total_time_col, 0)
+                mean = q.get(mean_time_col, 0)
+                calls = q.get("calls", 0)
+                rows = q.get("rows", 0)
+                lines.append(f"{i}. calls={calls} total={float(total):.2f}ms mean={float(mean):.2f}ms rows={rows} | {query_txt}")
+            return "\n".join(lines)
         except Exception as e:
             logger.error(f"Error getting slow queries: {e}", exc_info=True)
             return f"Error getting slow queries: {e}"
@@ -205,7 +203,24 @@ class TopQueriesCalc:
             resource_queries = [row.cells for row in slow_query_rows] if slow_query_rows else []
             logger.info(f"Found {len(resource_queries)} resource-intensive queries")
 
-            return str(resource_queries)
+            lines = [f"Top{len(resource_queries)} by resource blend (thr={frac_threshold:.2f}):"]
+            for i, q in enumerate(resource_queries, 1):
+                query_txt = (q.get("query") or "").strip().replace("\n", " ")
+                if len(query_txt) > 120:
+                    query_txt = query_txt[:117] + "..."
+                calls = q.get("calls", 0)
+                total = q.get("total_exec_time", 0)
+                mean = q.get("mean_exec_time", 0)
+                frac_total = q.get("total_exec_time_frac", 0)
+                frac_access = q.get("shared_blks_accessed_frac", 0)
+                frac_read = q.get("shared_blks_read_frac", 0)
+                frac_dirt = q.get("shared_blks_dirtied_frac", 0)
+                frac_wal = q.get("total_wal_bytes_frac", 0)
+                lines.append(
+                    f"{i} . calls={calls} total={float(total):.2f}ms mean={float(mean):.2f}ms frac(t/access/read/dirt/wal)="
+                    f"{float(frac_total):.2f}/{float(frac_access):.2f}/{float(frac_read):.2f}/{float(frac_dirt):.2f}/{float(frac_wal):.2f} | {query_txt}"
+                )
+            return "\n".join(lines)
         except Exception as e:
             logger.error(f"Error getting resource-intensive queries: {e}", exc_info=True)
             return f"Error resource-intensive queries: {e}"

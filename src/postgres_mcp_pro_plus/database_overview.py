@@ -567,16 +567,15 @@ class DatabaseOverviewTool:
             }
 
     def _format_bytes(self, bytes_value: int) -> str:
-        """Format bytes into human-readable string."""
+        """Format bytes into compact human-readable string (no spaces)."""
         if bytes_value == 0:
-            return "0 B"
-
+            return "0B"
         value = float(bytes_value)
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if value < 1024.0:
-                return f"{value:.1f} {unit}"
+                return f"{value:.1f}{unit}"
             value /= 1024.0
-        return f"{value:.1f} PB"
+        return f"{value:.1f}PB"
 
     async def _identify_performance_hotspots(self, db_info: dict[str, Any], all_tables_with_stats: list[dict[str, Any]]) -> None:
         """Identify performance hotspots in the database."""
@@ -750,146 +749,126 @@ class DatabaseOverviewTool:
             db_info["schema_relationship_mapping"] = {"error": f"Failed to analyze schema relationships: {e!s}"}
 
     def _format_as_text(self, result: dict[str, Any]) -> str:
-        """Format database overview result as human-readable text."""
+        """Format database overview result as compact text (no emojis, minimal headers)."""
         if "error" in result:
-            return f"❌ Error: {result['error']}\n\nExecution metadata:\n{self._format_execution_metadata(result.get('execution_metadata', {}))}"
+            return f"Error: {result['error']}\nMeta: {self._format_execution_metadata(result.get('execution_metadata', {}))}"
 
-        output = []
+        out: list[str] = []
 
-        # Database Summary
-        output.append("📊 DATABASE OVERVIEW")
-        output.append("=" * 50)
-
+        # Database summary (single line)
         db_summary = result.get("database_summary", {})
-        output.append(f"Total Schemas: {db_summary.get('total_schemas', 0)}")
-        output.append(f"Total Tables: {db_summary.get('total_tables', 0)}")
-        output.append(f"Total Size: {db_summary.get('total_size_readable', 'N/A')}")
-        output.append(f"Total Rows: {db_summary.get('total_rows', 0):,}")
-        output.append("")
+        out.append(
+            "DB: "
+            f"schemas={db_summary.get('total_schemas', 0)} "
+            f"tables={db_summary.get('total_tables', 0)} "
+            f"size={db_summary.get('total_size_readable', 'N/A')} "
+            f"rows={db_summary.get('total_rows', 0)}"
+        )
 
         # Performance Overview
         perf_overview = result.get("performance_overview", {})
         if perf_overview:
-            output.append("⚡ PERFORMANCE OVERVIEW")
-            output.append("-" * 30)
-            output.append(f"Active Connections: {perf_overview.get('active_connections', 0)}")
-            output.append(f"Total Connections: {perf_overview.get('total_connections', 0)}")
-            output.append(f"Max Connections: {perf_overview.get('max_connections', 0)}")
-            output.append(f"Connection Usage: {perf_overview.get('connection_usage_percent', 0)}%")
-
-            # Top tables
+            out.append(
+                "Perf: "
+                f"active={perf_overview.get('active_connections', 0)} "
+                f"total={perf_overview.get('total_connections', 0)} "
+                f"max={perf_overview.get('max_connections', 0)} "
+                f"usage={perf_overview.get('connection_usage_percent', 0)}%"
+            )
             top_tables = perf_overview.get("top_tables", {})
             if top_tables.get("largest"):
-                output.append("\n🔝 Largest Tables:")
-                for i, table in enumerate(top_tables["largest"], 1):
-                    output.append(f"  {i}. {table['schema']}.{table['table']} - {table['size_readable']}")
-
+                largest = [f"{t['schema']}.{t['table']} {t['size_readable']}" for t in top_tables["largest"][:3]]
+                out.append("Largest: " + "; ".join(largest))
             if top_tables.get("most_active"):
-                output.append("\n🔥 Most Active Tables:")
-                for i, table in enumerate(top_tables["most_active"], 1):
-                    output.append(f"  {i}. {table['schema']}.{table['table']} - {table['total_scans']} scans")
-            output.append("")
+                active = [f"{t['schema']}.{t['table']} scans={t['total_scans']}" for t in top_tables["most_active"][:3]]
+                out.append("MostActive: " + "; ".join(active))
 
         # Security Overview
         security_overview = result.get("security_overview", {})
         if security_overview:
-            output.append("🔒 SECURITY OVERVIEW")
-            output.append("-" * 30)
-            output.append(f"Security Score: {security_overview.get('security_score', 0)}/100")
-            output.append(f"Total Users: {security_overview.get('total_users', 0)}")
-            output.append(f"Superusers: {security_overview.get('superusers', 0)}")
-            output.append(f"Unlimited Connections: {security_overview.get('unlimited_connections', 0)}")
-
+            out.append(
+                "Security: "
+                f"score={security_overview.get('security_score', 0)}/100 "
+                f"users={security_overview.get('total_users', 0)} "
+                f"su={security_overview.get('superusers', 0)} "
+                f"unlim_conn={security_overview.get('unlimited_connections', 0)}"
+            )
             security_issues = security_overview.get("security_issues", [])
             if security_issues:
-                output.append(f"\n⚠️  Security Issues ({len(security_issues)}):")
-                for issue in security_issues:
-                    output.append(f"  • {issue}")
-
+                out.append("SecIssues: " + ", ".join(security_issues))
             recommendations = security_overview.get("recommendations", [])
             if recommendations:
-                output.append("\n💡 Recommendations:")
-                for rec in recommendations:
-                    output.append(f"  • {rec}")
-            output.append("")
+                out.append("SecRecs: " + ", ".join(recommendations))
 
         # Performance Hotspots
         hotspots = result.get("performance_hotspots", {})
         if hotspots and "error" not in hotspots:
             summary = hotspots.get("summary", {})
-            output.append("🔥 PERFORMANCE HOTSPOTS")
-            output.append("-" * 30)
-            output.append(f"Total Hotspots: {summary.get('total_hotspots', 0)}")
-            output.append(f"Critical Issues: {summary.get('critical_issues', 0)}")
-            output.append(f"Warning Issues: {summary.get('warning_issues', 0)}")
-
-            # High scan ratio tables
+            out.append(
+                f"Hotspots: total={summary.get('total_hotspots', 0)} crit={summary.get('critical_issues', 0)} warn={summary.get('warning_issues', 0)}"
+            )
             if hotspots.get("high_scan_ratio_tables"):
-                output.append("\n📊 High Sequential Scan Ratio Tables:")
-                for table in hotspots["high_scan_ratio_tables"][:5]:
-                    output.append(f"  • {table['qualified_name']} - {table['seq_scan_ratio']}% seq scans ({table['severity']})")
-
-            # High dead tuple tables
+                items = [
+                    f"{t['qualified_name']} r={t['seq_scan_ratio']}% sc={t['total_scans']} sz={t['size_mb']}MB sev={'H' if t['severity'] == 'HIGH' else 'M'}"
+                    for t in hotspots["high_scan_ratio_tables"][:5]
+                ]
+                out.append("HighSeqScan: " + "; ".join(items))
             if hotspots.get("high_dead_tuple_tables"):
-                output.append("\n💀 High Dead Tuple Ratio Tables:")
-                for table in hotspots["high_dead_tuple_tables"][:5]:
-                    output.append(f"  • {table['qualified_name']} - {table['dead_tuple_ratio']}% dead tuples ({table['severity']})")
-
-            # Maintenance recommendations
+                items = [
+                    f"{t['qualified_name']} dead={t['dead_tuple_ratio']}% sz={t['size_mb']}MB sev={'H' if t['severity'] == 'HIGH' else 'M'}"
+                    for t in hotspots["high_dead_tuple_tables"][:5]
+                ]
+                out.append("HighDeadTuples: " + "; ".join(items))
+            if hotspots.get("large_tables_with_issues"):
+                items = [
+                    f"{t['qualified_name']} sz={t['size_mb']}MB issues=[{', '.join(t.get('issues', []))}] sev={'H' if t['severity'] == 'HIGH' else 'M'}"
+                    for t in hotspots["large_tables_with_issues"][:5]
+                ]
+                out.append("LargeWithIssues: " + "; ".join(items))
+            if hotspots.get("high_modification_tables"):
+                items = [f"{t['qualified_name']} mods={t['total_modifications']}" for t in hotspots["high_modification_tables"][:5]]
+                out.append("HighMod: " + "; ".join(items))
             if hotspots.get("tables_needing_maintenance"):
-                output.append("\n🔧 Tables Needing Maintenance:")
-                for table in hotspots["tables_needing_maintenance"][:5]:
-                    recs = ", ".join(table["recommendations"])
-                    output.append(f"  • {table['qualified_name']} - {recs} ({table['priority']})")
-            output.append("")
+                items = [
+                    f"{t['qualified_name']} rec=[{', '.join(t.get('recommendations', []))}] prio={t.get('priority', 'MEDIUM')}"
+                    for t in hotspots["tables_needing_maintenance"][:5]
+                ]
+                out.append("Maintenance: " + "; ".join(items))
 
         # Relationships Summary
         relationships = result.get("relationships", {})
         if relationships:
             rel_summary = relationships.get("relationship_summary", {})
-            output.append("🔗 RELATIONSHIPS SUMMARY")
-            output.append("-" * 30)
-            output.append(f"Total Relationships: {rel_summary.get('total_relationships', 0)}")
-            output.append(f"Connected Tables: {rel_summary.get('connected_tables', 0)}")
-            output.append(f"Isolated Tables: {rel_summary.get('isolated_tables', 0)}")
-
-            # Most connected tables
+            out.append(
+                "Rel: "
+                f"total={rel_summary.get('total_relationships', 0)} "
+                f"connected={rel_summary.get('connected_tables', 0)} "
+                f"isolated={rel_summary.get('isolated_tables', 0)}"
+            )
             most_connected = rel_summary.get("most_connected_tables", [])
             if most_connected:
-                output.append("\n🌐 Most Connected Tables:")
-                for table in most_connected[:5]:
-                    output.append(f"  • {table['table']} - {table['connections']} connections")
-
-            # Hub tables
+                out.append("MostConnected: " + "; ".join([f"{t['table']}({t['connections']})" for t in most_connected[:5]]))
             hub_tables = rel_summary.get("hub_tables", [])
             if hub_tables:
-                output.append("\n🎯 Hub Tables (Most Referenced):")
-                for table in hub_tables[:5]:
-                    output.append(f"  • {table['table']} - referenced by {table['referenced_by']} tables")
-
-            # Insights
+                out.append("Hubs: " + "; ".join([f"{t['table']}({t['referenced_by']})" for t in hub_tables[:5]]))
             insights = rel_summary.get("relationship_insights", [])
             if insights:
-                output.append("\n💡 Relationship Insights:")
-                for insight in insights:
-                    output.append(f"  • {insight}")
-            output.append("")
+                out.append("RelInsights: " + "; ".join(insights))
 
         # Schema Details
         schemas = result.get("schemas", {})
         if schemas:
-            output.append("📁 SCHEMA DETAILS")
-            output.append("-" * 30)
             for schema_name, schema_info in schemas.items():
-                output.append(f"\n📂 {schema_name}:")
-                output.append(f"  Tables: {schema_info.get('table_count', 0)}")
-                output.append(f"  Size: {self._format_bytes(schema_info.get('total_size_bytes', 0))}")
-                output.append(f"  Rows: {schema_info.get('total_rows', 0):,}")
-
+                line = (
+                    f"Schema {schema_name}: "
+                    f"tables={schema_info.get('table_count', 0)} "
+                    f"size={self._format_bytes(schema_info.get('total_size_bytes', 0))} "
+                    f"rows={schema_info.get('total_rows', 0)}"
+                )
                 if schema_info.get("is_sampled"):
-                    output.append(f"  ⚠️  Sampled: {schema_info.get('tables_analyzed', 0)}/{schema_info.get('table_count', 0)} tables analyzed")
+                    line += f" sampled={schema_info.get('tables_analyzed', 0)}/{schema_info.get('table_count', 0)}"
+                out.append(line)
 
-                # Show top tables in schema
                 tables = schema_info.get("tables", {})
                 if tables:
                     top_schema_tables = sorted(
@@ -897,41 +876,33 @@ class DatabaseOverviewTool:
                         key=lambda x: x[1]["size_bytes"],
                         reverse=True,
                     )[:3]
-
                     if top_schema_tables:
-                        output.append("  Top tables:")
-                        for table_name, table_info in top_schema_tables:
-                            output.append(f"    • {table_name} - {table_info.get('size_readable', 'N/A')}")
+                        tops = [f"{name} {info.get('size_readable', 'N/A')}" for name, info in top_schema_tables]
+                        out.append("  Top: " + "; ".join(tops))
 
         # Schema Relationship Mapping
         schema_mapping = result.get("schema_relationship_mapping", {})
         if schema_mapping:
-            output.append("\n🔗 SCHEMA RELATIONSHIP MAPPING")
-            output.append("-" * 40)
-
             if "error" in schema_mapping:
-                output.append(f"❌ Error: {schema_mapping['error']}")
+                out.append(f"SchemaMapError: {schema_mapping['error']}")
             elif "analysis_text" in schema_mapping:
-                # Add the full schema analysis text
-                output.append(schema_mapping["analysis_text"])
-            output.append("")
+                out.append("SchemaMap:")
+                out.append(schema_mapping["analysis_text"])
 
         # Execution Metadata
         metadata = result.get("execution_metadata", {})
         if metadata:
-            output.append("📋 EXECUTION METADATA")
-            output.append("-" * 30)
-            output.append(self._format_execution_metadata(metadata))
+            out.append("Meta: " + self._format_execution_metadata(metadata))
 
-        return "\n".join(output)
+        return "\n".join(out)
 
     def _format_execution_metadata(self, metadata: dict[str, Any]) -> str:
-        """Format execution metadata as text."""
-        output = []
-        output.append(f"Max Tables: {metadata.get('max_tables', 'N/A')}")
-        output.append(f"Sampling Mode: {metadata.get('sampling_mode', 'N/A')}")
-        output.append(f"Timeout: {metadata.get('timeout', 'N/A')}s")
-        output.append(f"Tables Analyzed: {metadata.get('tables_analyzed', 0)}")
-        output.append(f"Tables Skipped: {metadata.get('tables_skipped', 0)}")
-        output.append(f"Execution Time: {metadata.get('execution_time', 'N/A')}s")
-        return "\n".join(output)
+        """Format execution metadata compactly on one line."""
+        return (
+            f"max_tables={metadata.get('max_tables', 'NA')} "
+            f"sampling={metadata.get('sampling_mode', 'NA')} "
+            f"timeout={metadata.get('timeout', 'NA')}s "
+            f"analyzed={metadata.get('tables_analyzed', 0)} "
+            f"skipped={metadata.get('tables_skipped', 0)} "
+            f"time={metadata.get('execution_time', 'NA')}s"
+        )

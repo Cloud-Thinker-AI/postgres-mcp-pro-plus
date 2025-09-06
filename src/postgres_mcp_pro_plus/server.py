@@ -80,59 +80,52 @@ def format_text_response(text: Any) -> ResponseType:
 
 
 def format_schemas_as_text(schemas: list[dict]) -> str:
-    """Format schemas list as human-readable text."""
+    """Format schemas list compactly without emojis, preserving details."""
     if not schemas:
         return "No schemas found."
 
-    output = []
-    output.append("📂 DATABASE SCHEMAS")
-    output.append("=" * 30)
-
     # Group by schema type
-    system_schemas = [s for s in schemas if s.get("schema_type") in ["System Schema", "System Information Schema"]]
-    user_schemas = [s for s in schemas if s.get("schema_type") == "User Schema"]
+    system = [s for s in schemas if s.get("schema_type") in ("System Schema", "System Information Schema")]
+    user = [s for s in schemas if s.get("schema_type") == "User Schema"]
 
-    if user_schemas:
-        output.append("\n👤 USER SCHEMAS")
-        output.append("-" * 20)
-        for schema in user_schemas:
-            output.append(f"• {schema['schema_name']} (Owner: {schema.get('schema_owner', 'N/A')})")
+    out: list[str] = []
+    if user:
+        items = [f"{s['schema_name']}(owner={s.get('schema_owner', 'N/A')})" for s in user]
+        out.append("UserSchemas: " + "; ".join(items))
+    if system:
+        shown = system[:10]
+        items = [f"{s['schema_name']}({s.get('schema_type', 'N/A')})" for s in shown]
+        line = f"SystemSchemas({len(system)}): " + "; ".join(items)
+        if len(system) > 10:
+            line += f"; +{len(system) - 10} more"
+        out.append(line)
 
-    if system_schemas:
-        output.append(f"\n🔧 SYSTEM SCHEMAS ({len(system_schemas)})")
-        output.append("-" * 20)
-        for schema in system_schemas[:10]:  # Show first 10 system schemas
-            output.append(f"• {schema['schema_name']} - {schema.get('schema_type', 'N/A')}")
-        if len(system_schemas) > 10:
-            output.append(f"... and {len(system_schemas) - 10} more system schemas")
-
-    return "\n".join(output)
+    return "\n".join(out)
 
 
 def format_objects_as_text(objects: list[dict], object_type: str) -> str:
-    """Format objects list as human-readable text."""
+    """Format object lists compactly without emojis/headers, preserving details."""
     if not objects:
         return f"No {object_type}s found."
 
-    output = []
-    output.append(f"📋 {object_type.upper()}S")
-    output.append("=" * 30)
+    label_map = {"table": "Tables", "view": "Views", "sequence": "Sequences", "extension": "Extensions"}
+    label = label_map.get(object_type, object_type.capitalize() + "s")
 
-    for obj in objects:
-        if object_type in ["table", "view"]:
-            output.append(f"• {obj['schema']}.{obj['name']} ({obj['type']})")
-        elif object_type == "sequence":
-            output.append(f"• {obj['schema']}.{obj['name']} ({obj['data_type']})")
-        elif object_type == "extension":
-            output.append(f"• {obj['name']} (v{obj['version']}) - Relocatable: {obj['relocatable']}")
-        else:
-            output.append(f"• {obj}")
+    def item_str(o: dict) -> str:
+        if object_type in ("table", "view"):
+            return f"{o['schema']}.{o['name']}({o['type']})"
+        if object_type == "sequence":
+            return f"{o['schema']}.{o['name']}({o['data_type']})"
+        if object_type == "extension":
+            return f"{o['name']} v{o['version']} reloc={o['relocatable']}"
+        return str(o)
 
-    return "\n".join(output)
+    items = "; ".join(item_str(o) for o in objects)
+    return f"{label}({len(objects)}): {items}"
 
 
 def format_object_details_as_text(details: dict, object_type: str) -> str:
-    """Format object details as human-readable text."""
+    """Format object details compactly without emojis, preserving content."""
     if not details:
         return f"No details found for {object_type}."
 
@@ -140,99 +133,77 @@ def format_object_details_as_text(details: dict, object_type: str) -> str:
 
     if object_type in ["table", "view"]:
         basic = details.get("basic", {})
-        output.append(f"📊 {object_type.upper()} DETAILS")
-        output.append("=" * 30)
-        output.append(f"Schema: {basic.get('schema', 'N/A')}")
-        output.append(f"Name: {basic.get('name', 'N/A')}")
-        output.append(f"Type: {basic.get('type', 'N/A')}")
+        output.append(f"{object_type.capitalize()}: {basic.get('schema', 'N/A')}.{basic.get('name', 'N/A')} type={basic.get('type', 'N/A')}")
 
         # Columns
         columns = details.get("columns", [])
         if columns:
-            output.append(f"\n📋 COLUMNS ({len(columns)})")
-            output.append("-" * 20)
+            parts = []
             for col in columns:
-                nullable = "NULL" if col.get("is_nullable") == "YES" else "NOT NULL"
-                default = f" DEFAULT {col.get('default')}" if col.get("default") else ""
-                output.append(f"• {col['column']} {col['data_type']} {nullable}{default}")
+                nullable = "NULL" if col.get("is_nullable") == "YES" else "NOTNULL"
+                default = col.get("default")
+                piece = f"{col['column']} {col['data_type']} {nullable}"
+                if default:
+                    piece += f" def={default}"
+                parts.append(piece)
+            output.append(f"Columns({len(columns)}): " + "; ".join(parts))
 
         # Constraints
         constraints = details.get("constraints", [])
         if constraints:
-            output.append(f"\n🔒 CONSTRAINTS ({len(constraints)})")
-            output.append("-" * 20)
+            items = []
             for constraint in constraints:
-                columns_str = ", ".join(constraint.get("columns", []))
-                output.append(f"• {constraint['name']} ({constraint['type']}) on [{columns_str}]")
+                columns_str = ",".join(constraint.get("columns", []))
+                items.append(f"{constraint['name']}({constraint['type']}) on[{columns_str}]")
+            output.append(f"Constraints({len(constraints)}): " + "; ".join(items))
 
         # Indexes
         indexes = details.get("indexes", [])
         if indexes:
-            output.append(f"\n📇 INDEXES ({len(indexes)})")
-            output.append("-" * 20)
-            for idx in indexes:
-                output.append(f"• {idx['name']}")
-                output.append(f"  Definition: {idx['definition']}")
+            items = [f"{idx['name']} def={idx['definition']}" for idx in indexes]
+            output.append(f"Indexes({len(indexes)}): " + "; ".join(items))
 
     elif object_type == "sequence":
-        output.append("🔢 SEQUENCE DETAILS")
-        output.append("=" * 30)
-        output.append(f"Schema: {details.get('schema', 'N/A')}")
-        output.append(f"Name: {details.get('name', 'N/A')}")
-        output.append(f"Data Type: {details.get('data_type', 'N/A')}")
-        output.append(f"Start Value: {details.get('start_value', 'N/A')}")
-        output.append(f"Increment: {details.get('increment', 'N/A')}")
+        output.append(
+            "Sequence: "
+            f"{details.get('schema', 'N/A')}.{details.get('name', 'N/A')} "
+            f"type={details.get('data_type', 'N/A')} start={details.get('start_value', 'N/A')} inc={details.get('increment', 'N/A')}"
+        )
 
     elif object_type == "extension":
-        output.append("🔌 EXTENSION DETAILS")
-        output.append("=" * 30)
-        output.append(f"Name: {details.get('name', 'N/A')}")
-        output.append(f"Version: {details.get('version', 'N/A')}")
-        output.append(f"Relocatable: {details.get('relocatable', 'N/A')}")
+        output.append(f"Extension: name={details.get('name', 'N/A')} v={details.get('version', 'N/A')} reloc={details.get('relocatable', 'N/A')}")
 
     return "\n".join(output)
 
 
 def format_query_results_as_text(results: list[dict]) -> str:
-    """Format SQL query results as human-readable text."""
+    """Format SQL query results compactly without emojis, preserving content."""
     if not results:
-        return "No results returned."
+        return "No results"
 
-    output = []
-    output.append("📊 QUERY RESULTS")
-    output.append("=" * 30)
-    output.append(f"Rows returned: {len(results)}")
-    output.append("")
+    # Column order from first row
+    columns = list(results[0].keys())
 
-    if results:
-        # Get column names from the first row
-        columns = list(results[0].keys())
+    out: list[str] = []
+    out.append(f"Rows={len(results)} Cols={len(columns)}")
+    out.append("Columns: " + ", ".join(columns))
 
-        # Show column headers
-        output.append("📋 COLUMNS:")
+    # Show first few rows in compact form
+    max_rows = min(5, len(results))
+    for i, row in enumerate(results[:max_rows], 1):
+        parts = []
         for col in columns:
-            output.append(f"• {col}")
-        output.append("")
+            val = row.get(col)
+            s = str(val)
+            if len(s) > 80:
+                s = s[:77] + "..."
+            parts.append(f"{col}={s}")
+        out.append(f"{i}: " + "; ".join(parts))
 
-        # Show first few rows
-        max_rows = min(10, len(results))
-        output.append(f"📄 DATA (showing first {max_rows} rows):")
-        output.append("-" * 30)
+    if len(results) > max_rows:
+        out.append(f"+{len(results) - max_rows} more")
 
-        for i, row in enumerate(results[:max_rows], 1):
-            output.append(f"Row {i}:")
-            for col, value in row.items():
-                # Truncate long values
-                str_value = str(value)
-                if len(str_value) > 100:
-                    str_value = str_value[:97] + "..."
-                output.append(f"  {col}: {str_value}")
-            output.append("")
-
-        if len(results) > max_rows:
-            output.append(f"... and {len(results) - max_rows} more rows")
-
-    return "\n".join(output)
+    return "\n".join(out)
 
 
 def format_error_response(error: str) -> ResponseType:

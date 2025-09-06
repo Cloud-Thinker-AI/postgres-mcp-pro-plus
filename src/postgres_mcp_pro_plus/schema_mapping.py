@@ -102,7 +102,7 @@ class SchemaMappingTool:
 
         except Exception as e:
             logger.error(f"Error analyzing schema relationships: {e}")
-            return f"❌ Error analyzing schema relationships: {e}"
+            return f"Error analyzing schema relationships: {e}"
 
     async def _analyze_schema(self, schema: str) -> None:
         """Analyze a single schema and populate node data."""
@@ -592,217 +592,184 @@ class SchemaMappingTool:
             return []
 
     def _format_as_text(self, result: dict[str, Any]) -> str:
-        """Format schema relationship analysis result as human-readable text."""
+        """Format schema relationship analysis as compact text (no emojis)."""
         if "error" in result:
-            return f"❌ Error: {result['error']}"
+            return f"Error: {result['error']}"
 
-        output = []
+        out: list[str] = []
 
-        # Header
-        output.append("🔗 SCHEMA RELATIONSHIP ANALYSIS")
-        output.append("=" * 50)
-
-        # Summary
+        # Summary (single line)
         summary = result.get("summary", {})
-        output.append(f"Total Schemas: {summary.get('total_schemas', 0)}")
-        output.append(f"Total Tables: {summary.get('total_tables', 0)}")
-        output.append(f"Cross-Schema Relationships: {summary.get('cross_schema_relationships', 0)}")
-        output.append(f"Intra-Schema Relationships: {summary.get('intra_schema_relationships', 0)}")
-        output.append("")
+        out.append(
+            "Summary: "
+            f"schemas={summary.get('total_schemas', 0)} "
+            f"tables={summary.get('total_tables', 0)} "
+            f"cross={summary.get('cross_schema_relationships', 0)} "
+            f"intra={summary.get('intra_schema_relationships', 0)}"
+        )
 
         # Schema Analysis
         schema_analysis = result.get("schema_analysis", {})
         if schema_analysis:
-            output.append("📊 SCHEMA DEPENDENCY ANALYSIS")
-            output.append("-" * 40)
-
             # Most dependent schema
             most_dependent = schema_analysis.get("most_dependent")
             if most_dependent:
-                output.append(f"🔗 Most Dependent Schema: {most_dependent['schema']}")
-                output.append(f"  • Dependency Score: {most_dependent['dependency_score']}")
-                output.append(f"  • Outgoing Dependencies: {len(most_dependent['outgoing_dependencies'])}")
-                output.append(f"  • Incoming Dependencies: {len(most_dependent['incoming_dependencies'])}")
-
+                line = (
+                    f"MostDependent: {most_dependent['schema']} "
+                    f"dep_score={most_dependent['dependency_score']} "
+                    f"out={len(most_dependent['outgoing_dependencies'])} "
+                    f"in={len(most_dependent['incoming_dependencies'])}"
+                )
+                out.append(line)
                 if most_dependent["outgoing_dependencies"]:
-                    output.append(f"  • Depends on: {', '.join(most_dependent['outgoing_dependencies'])}")
-
+                    out.append("DependsOn: " + ", ".join(most_dependent["outgoing_dependencies"]))
                 if most_dependent["incoming_dependencies"]:
-                    output.append(f"  • Depended on by: {', '.join(most_dependent['incoming_dependencies'])}")
+                    out.append("DependedBy: " + ", ".join(most_dependent["incoming_dependencies"]))
 
             # Most isolated schema
             most_isolated = schema_analysis.get("most_isolated")
             if most_isolated and most_isolated["is_isolated"]:
-                output.append(f"\n🏝️  Most Isolated Schema: {most_isolated['schema']}")
-                output.append(f"  • Tables: {most_isolated['table_count']}")
-                output.append(f"  • Size: {self._format_bytes(most_isolated['total_size_bytes'])}")
+                out.append(
+                    f"MostIsolated: {most_isolated['schema']} "
+                    f"tables={most_isolated['table_count']} "
+                    f"size={self._format_bytes(most_isolated['total_size_bytes'])}"
+                )
 
             # Schema metrics
             schema_metrics = schema_analysis.get("schema_metrics", [])
             if schema_metrics:
-                output.append("\n📋 Schema Metrics:")
                 for i, schema in enumerate(schema_metrics[:5], 1):
-                    coupling_level = self._get_coupling_display(schema)
-                    output.append(f"  {i}. {schema['schema']} - {coupling_level}")
-                    output.append(f"     Tables: {schema['table_count']}, Size: {self._format_bytes(schema['total_size_bytes'])}")
-
+                    level = self._get_coupling_display(schema)
+                    line = (
+                        f"Schema{i}: {schema['schema']} level={level} "
+                        f"tables={schema['table_count']} size={self._format_bytes(schema['total_size_bytes'])}"
+                    )
+                    out.append(line)
                     if schema["outgoing_dependencies"]:
-                        output.append(f"     → Depends on: {', '.join(schema['outgoing_dependencies'])}")
+                        out.append("  -> " + ", ".join(schema["outgoing_dependencies"]))
                     if schema["incoming_dependencies"]:
-                        output.append(f"     ← Depended on by: {', '.join(schema['incoming_dependencies'])}")
+                        out.append("  <- " + ", ".join(schema["incoming_dependencies"]))
 
             # Dependency chains
             dependency_chains = schema_analysis.get("dependency_chains", [])
             if dependency_chains:
-                output.append("\n🔗 Dependency Chains:")
-                for i, chain in enumerate(dependency_chains[:5], 1):
-                    output.append(f"  {i}. {' → '.join(chain)}")
-
-            output.append("")
+                chains = [" -> ".join(chain) for chain in dependency_chains[:5]]
+                out.append("Chains: " + " | ".join(chains))
 
         # Table Analysis
         table_analysis = result.get("table_analysis", {})
         if table_analysis:
-            output.append("📋 TABLE DEPENDENCY ANALYSIS")
-            output.append("-" * 40)
-
             # Most connected table
             most_connected = table_analysis.get("most_connected")
             if most_connected:
-                output.append(f"🌐 Most Connected Table: {most_connected['qualified_name']}")
-                output.append(f"  • Total Connections: {most_connected['connection_count']}")
-                output.append(f"  • Outgoing FKs: {most_connected['outgoing_fks']}")
-                output.append(f"  • Incoming FKs: {most_connected['incoming_fks']}")
-                output.append(f"  • Size: {self._format_bytes(most_connected['size_bytes'])}")
+                out.append(
+                    "MostConnected: "
+                    f"{most_connected['qualified_name']} conn={most_connected['connection_count']} "
+                    f"out={most_connected['outgoing_fks']} in={most_connected['incoming_fks']} "
+                    f"size={self._format_bytes(most_connected['size_bytes'])}"
+                )
 
             # Hub tables
             hub_tables = table_analysis.get("hub_tables", [])
             if hub_tables:
-                output.append("\n🎯 Hub Tables (Highly Referenced):")
-                for i, table in enumerate(hub_tables[:5], 1):
-                    output.append(f"  {i}. {table['qualified_name']} - {table['incoming_fks']} incoming FKs")
-                    output.append(f"     Size: {self._format_bytes(table['size_bytes'])}, Rows: {table['row_count']:,}")
+                hubs = [
+                    f"{t['qualified_name']} in_fks={t['incoming_fks']} size={self._format_bytes(t['size_bytes'])} rows={t['row_count']}"
+                    for t in hub_tables[:5]
+                ]
+                out.append("Hubs: " + "; ".join(hubs))
 
             # Isolated tables
             isolated_tables = table_analysis.get("isolated_tables", [])
             if isolated_tables:
-                output.append("\n🏝️  Isolated Tables (No FKs):")
                 isolated_count = len(isolated_tables)
-                output.append(f"  Total: {isolated_count} tables")
-
+                out.append(f"Isolated: total={isolated_count}")
                 if isolated_count > 0:
-                    output.append("  Largest isolated tables:")
-                    for i, table in enumerate(isolated_tables[:5], 1):
-                        output.append(f"    {i}. {table['qualified_name']} - {self._format_bytes(table['size_bytes'])}")
+                    largest = [f"{t['qualified_name']} {self._format_bytes(t['size_bytes'])}" for t in isolated_tables[:5]]
+                    out.append("IsolatedLargest: " + "; ".join(largest))
 
             output.append("")
 
         # Relationship Patterns
         relationship_patterns = result.get("relationship_patterns", {})
         if relationship_patterns:
-            output.append("🔄 RELATIONSHIP PATTERNS")
-            output.append("-" * 40)
-
-            output.append(f"Cross-Schema Relationships: {relationship_patterns.get('cross_schema_count', 0)}")
-            output.append(f"Intra-Schema Relationships: {relationship_patterns.get('intra_schema_count', 0)}")
-            output.append(f"Total Relationships: {relationship_patterns.get('total_relationships', 0)}")
+            out.append(
+                "Patterns: "
+                f"cross={relationship_patterns.get('cross_schema_count', 0)} "
+                f"intra={relationship_patterns.get('intra_schema_count', 0)} "
+                f"total={relationship_patterns.get('total_relationships', 0)}"
+            )
 
             # Most common cross-schema pattern
             most_common = relationship_patterns.get("most_common_cross_schema")
             if most_common:
-                output.append(f"\n🔝 Most Common Cross-Schema Pattern: {most_common[0]} ({most_common[1]} relationships)")
+                out.append(f"MostCommonCross: {most_common[0]} ({most_common[1]})")
 
             # Schema coupling analysis
             schema_coupling = relationship_patterns.get("schema_coupling", {})
             if schema_coupling:
-                output.append("\n📊 Schema Coupling Analysis:")
-
-                # Sort by coupling ratio
                 sorted_coupling = sorted(schema_coupling.items(), key=lambda x: x[1]["coupling_ratio"], reverse=True)
-
                 for schema, coupling_data in sorted_coupling[:5]:
-                    level = coupling_data["coupling_level"]
-                    ratio = coupling_data["coupling_ratio"]
-                    external_refs = coupling_data["external_references"]
-
-                    level_emoji = {"isolated": "🏝️", "low": "🟢", "medium": "🟡", "high": "🔴"}.get(level, "⚪")
-
-                    output.append(f"  {level_emoji} {schema}: {level.upper()} coupling (ratio: {ratio:.2f}, external refs: {external_refs})")
+                    out.append(
+                        f"Coupling: {schema} level={coupling_data['coupling_level']} "
+                        f"ratio={coupling_data['coupling_ratio']:.2f} ext_refs={coupling_data['external_references']}"
+                    )
 
             output.append("")
 
         # Recommendations
         recommendations = result.get("recommendations", [])
         if recommendations:
-            output.append("💡 RECOMMENDATIONS")
-            output.append("-" * 40)
-
             # Group recommendations by type
             warnings = [r for r in recommendations if r["type"] == "warning"]
             optimizations = [r for r in recommendations if r["type"] == "optimization"]
             info = [r for r in recommendations if r["type"] == "info"]
 
             if warnings:
-                output.append("⚠️  Warnings:")
-                for rec in warnings:
-                    output.append(f"  • {rec['message']}")
-                    output.append(f"    💡 {rec['suggestion']}")
+                out.append("Warnings: " + "; ".join([f"{r['message']} (suggest: {r['suggestion']})" for r in warnings]))
 
             if optimizations:
-                output.append("\n🔧 Optimizations:")
-                for rec in optimizations:
-                    output.append(f"  • {rec['message']}")
-                    output.append(f"    💡 {rec['suggestion']}")
+                out.append("Optimizations: " + "; ".join([f"{r['message']} (suggest: {r['suggestion']})" for r in optimizations]))
 
             if info:
-                output.append("\nℹ️  Information:")
-                for rec in info:
-                    output.append(f"  • {rec['message']}")
-                    output.append(f"    💡 {rec['suggestion']}")
-
-            output.append("")
+                out.append("Info: " + "; ".join([f"{r['message']} (suggest: {r['suggestion']})" for r in info]))
 
         # Visual representation info
         visual_data = result.get("visual_representation", {})
         if visual_data:
             metrics = visual_data.get("metrics", {})
             if metrics:
-                output.append("📊 VISUALIZATION METRICS")
-                output.append("-" * 40)
-                output.append(f"Total Nodes: {metrics.get('total_nodes', 0)}")
-                output.append(f"Total Edges: {metrics.get('total_edges', 0)}")
-                output.append(f"Graph Density: {metrics.get('density', 0):.3f}")
-
+                line = f"Viz: nodes={metrics.get('total_nodes', 0)} edges={metrics.get('total_edges', 0)} density={metrics.get('density', 0):.3f}"
+                out.append(line)
                 layout = visual_data.get("layout", {})
                 if layout:
-                    output.append(f"Recommended Layout: {layout.get('recommended_layout', 'N/A')}")
-                    output.append(f"Clustering: {layout.get('clustering', False)}")
-                    output.append(f"Edge Bundling: {layout.get('edge_bundling', False)}")
+                    out.append(
+                        "Layout: "
+                        f"{layout.get('recommended_layout', 'N/A')} "
+                        f"cluster={layout.get('clustering', False)} "
+                        f"bundle={layout.get('edge_bundling', False)}"
+                    )
 
-        return "\n".join(output)
+        return "\n".join(out)
 
     def _format_bytes(self, bytes_value: int) -> str:
-        """Format bytes into human-readable string."""
+        """Format bytes into compact human-readable string (no spaces)."""
         if bytes_value == 0:
-            return "0 B"
-
+            return "0B"
         value = float(bytes_value)
         for unit in ["B", "KB", "MB", "GB", "TB"]:
             if value < 1024.0:
-                return f"{value:.1f} {unit}"
+                return f"{value:.1f}{unit}"
             value /= 1024.0
-        return f"{value:.1f} PB"
+        return f"{value:.1f}PB"
 
     def _get_coupling_display(self, schema: dict[str, Any]) -> str:
-        """Get coupling level display string."""
+        """Get compact coupling level label."""
         score = schema.get("dependency_score", 0)
         isolation = schema.get("isolation_score", 0)
-
         if isolation == 0:
-            return "🏝️ Isolated"
-        elif score > 10:
-            return "🔴 High dependency"
-        elif score > 5:
-            return "🟡 Medium dependency"
-        else:
-            return "🟢 Low dependency"
+            return "isolated"
+        if score > 10:
+            return "high"
+        if score > 5:
+            return "medium"
+        return "low"

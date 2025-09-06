@@ -629,7 +629,7 @@ wheels = [
 
 [[package]]
 name = "postgres-mcp-pro-plus"
-version = "0.3.6"
+version = "0.3.7"
 source = { editable = "." }
 dependencies = [
     { name = "attrs" },
