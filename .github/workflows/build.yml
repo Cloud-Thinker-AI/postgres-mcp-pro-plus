@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - cloudthinker/postgres-mcp-pro-plus
     paths-ignore:
       - "**/README.md"
   pull_request:
